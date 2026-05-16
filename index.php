@@ -36,7 +36,7 @@ $all_testi = mysqli_query($koneksi, "SELECT * FROM testimoni ORDER BY id DESC");
 
   <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-orange-100">
     <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-      <a href="#" class="text-2xl font-extrabold text-orange-600 tracking-tight">Toko<span class="text-slate-900">Saya</span></a>
+      <a href="#" class="text-2xl font-extrabold text-orange-600 tracking-tight">Rumah<span class="text-slate-900">Martha</span></a>
       <div class="hidden md:flex items-center gap-8 font-medium">
         <a href="#beranda" class="hover:text-orange-500 transition">Beranda</a>
         <a href="#tentang" class="hover:text-orange-500 transition">Tentang</a>
@@ -437,7 +437,7 @@ $all_testi = mysqli_query($koneksi, "SELECT * FROM testimoni ORDER BY id DESC");
 
   <div id="orderModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 overflow-hidden">
     <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal()"></div>
-    <div class="relative bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-y-auto transform transition-all scale-[0.9] md:scale-[1]">
+    <div class="relative bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-y-auto transform transition-all scale-[0.65] lg:scale-[0.89]">
       <div class="orange-gradient p-6 text-white text-center">
         <h3 class="text-2xl font-bold">Lengkapi Pesanan</h3>
         <p class="text-orange-100 text-sm opacity-90" id="modalSubTitle">

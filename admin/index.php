@@ -70,9 +70,9 @@ $page = $_GET['page'] ?? 'dashboard';
         case 'edit_order':
           include 'edit_order.php';
           break;
-        case 'cetak_laporan':
-          include 'cetak_laporan.php';
-          break;
+        // case 'cetak_laporan':
+        //   include 'cetak_laporan.php';
+        //   break;
         case 'pengaturan':
           include 'pengaturan.php';
           break;
