@@ -11,7 +11,8 @@
  */
 
 if (!defined('AKSES_AMAN')) {
-    die('Akses langsung tidak diizinkan!');
+    require_once __DIR__ . '/../config/db.php';
+    abort_error(403, 'Akses Langsung Ditolak', 'File komponen admin tidak dapat diakses secara langsung.', base_url('admin/index.php'), 'Ke Dashboard Admin');
 }
 
 // ========== PROSES TAMBAH PRODUK BARU ==========

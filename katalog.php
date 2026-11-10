@@ -29,8 +29,8 @@ $result = mysqli_query($koneksi, $sql);
 
   <nav class="bg-white border-b border-gray-100 sticky top-0 z-50">
     <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-      <a href="index.php" class="text-2xl font-extrabold text-orange-600">Toko<span class="text-slate-900">Saya</span></a>
-      <a href="/store#menu" class="text-sm font-bold text-gray-500 hover:text-orange-500 transition">← Kembali ke Beranda</a>
+      <a href="<?= base_url() ?>" class="text-2xl font-extrabold text-orange-600">Toko<span class="text-slate-900">Saya</span></a>
+      <a href="<?= base_url('#menu') ?>" class="text-sm font-bold text-gray-500 hover:text-orange-500 transition">← Kembali ke Beranda</a>
     </div>
   </nav>
 

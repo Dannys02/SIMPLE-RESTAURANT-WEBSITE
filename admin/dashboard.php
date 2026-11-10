@@ -1,6 +1,7 @@
 <?php
 if (!defined('AKSES_AMAN')) {
-  die('Akses langsung tidak diizinkan!');
+  require_once __DIR__ . '/../config/db.php';
+  abort_error(403, 'Akses Langsung Ditolak', 'File komponen admin tidak dapat diakses secara langsung.', base_url('admin/index.php'), 'Ke Dashboard Admin');
 }
 
 // tanggal
@@ -56,7 +57,7 @@ $total_bulanan = mysqli_fetch_assoc($q_bulanan)['total'] ?? 0;
 
 <header class="flex flex-col md:flex-row md:justify-between md:items-end border-b border-gray-200 pb-4 mb-8">
   <div>
-    <a href="/store" class="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
+    <a href="<?= base_url() ?>" class="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
       Dashboard <span class="text-orange-600"><?= $_SESSION['username']; ?></span>
     </a>
     <p class="text-sm text-gray-400 mt-1 hidden md:block">

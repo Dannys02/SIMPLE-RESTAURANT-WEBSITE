@@ -10,7 +10,8 @@
  */
 
 if (!defined('AKSES_AMAN')) {
-    die('Akses langsung tidak diizinkan!');
+    require_once __DIR__ . '/../config/db.php';
+    abort_error(403, 'Akses Langsung Ditolak', 'File komponen admin tidak dapat diakses secara langsung.', base_url('admin/index.php'), 'Ke Dashboard Admin');
 }
 
 // ========== PROSES UPDATE TESTIMONI ==========
@@ -39,13 +40,22 @@ if (isset($_POST['update_testimoni_ini'])) {
 
 // ========== AMBIL DATA TESTIMONI UNTUK DIEDIT ==========
 $id_edit = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
-$query = mysqli_query($koneksi, "SELECT * FROM testimoni WHERE id = $id_edit");
-$t = mysqli_fetch_assoc($query);
+$t = null;
+if ($id_edit && $id_edit > 0) {
+    $query = mysqli_query($koneksi, "SELECT * FROM testimoni WHERE id = $id_edit");
+    $t = mysqli_fetch_assoc($query);
+}
 
 // Cek apakah testimoni ditemukan
 if (!$t) {
-    echo "<div class='p-4 bg-red-100 rounded-xl'>Testimoni Gak Ketemu! ID: $id_edit</div>";
-    exit;
+    http_response_code(404);
+    echo "<div class='max-w-xl mx-auto my-8 p-6 bg-white border border-slate-200 rounded-xl'>
+            <span class='inline-block px-2.5 py-1 bg-orange-100 text-orange-800 text-xs font-bold rounded mb-2'>HTTP Error 404</span>
+            <h2 class='text-lg font-bold text-slate-900 mb-1'>Testimoni Tidak Ditemukan</h2>
+            <p class='text-sm text-slate-600 mb-4'>Data testimoni dengan ID #" . htmlspecialchars((string)$id_edit) . " tidak tersedia.</p>
+            <a href='index.php?page=testimoni' class='inline-block px-4 py-2 bg-orange-600 text-white text-sm font-bold rounded-lg'>Kembali ke Manajemen Testimoni</a>
+          </div>";
+    return;
 }
 ?>
 

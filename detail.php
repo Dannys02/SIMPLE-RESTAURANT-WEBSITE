@@ -2,12 +2,29 @@
 include 'config/db.php';
 $id = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
 
-$query = mysqli_query($koneksi, "SELECT * FROM produk WHERE id = $id");
-$p = mysqli_fetch_assoc($query);
+if (!$id || $id <= 0) {
+  abort_error(
+    404,
+    'Menu Tidak Ditemukan',
+    'Parameter ID menu tidak valid atau tidak disertakan pada alamat URL.',
+    base_url('katalog.php'),
+    'Lihat Katalog Menu'
+  );
+}
+
+$stmt = mysqli_prepare($koneksi, "SELECT * FROM produk WHERE id = ?");
+mysqli_stmt_bind_param($stmt, "i", $id);
+mysqli_stmt_execute($stmt);
+$p = mysqli_stmt_get_result($stmt)->fetch_assoc();
 
 if (!$p) {
-  header("Location: index.php");
-  exit;
+  abort_error(
+    404,
+    'Menu Tidak Ditemukan',
+    'Menu yang Anda cari tidak tersedia atau sudah dihapus dari daftar katalog kami.',
+    base_url('katalog.php'),
+    'Lihat Katalog Menu'
+  );
 }
 
 $isOut = ($p['stok'] <= 0);
@@ -36,15 +53,15 @@ $nomor_tujuan = $row_wa['nomor'] ?? '6285645837298';
 
   <nav class="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-orange-100">
     <div class="container mx-auto px-6 py-4">
-      <a href="/store" class="text-2xl font-extrabold text-orange-600 tracking-tight">Toko<span class="text-slate-900">Saya</span></a>
+      <a href="<?= base_url() ?>" class="text-2xl font-extrabold text-orange-600 tracking-tight">Toko<span class="text-slate-900">Saya</span></a>
     </div>
   </nav>
 
   <main class="container mx-auto px-4 py-8 md:py-16">
     <nav class="mb-8 flex items-center gap-2 text-sm font-medium text-gray-500">
-      <a href="/store#menu" class="hover:text-orange-500 transition">Halaman Utama</a>
+      <a href="<?= base_url('#menu') ?>" class="hover:text-orange-500 transition">Halaman Utama</a>
       <span>/</span>
-      <a href="katalog.php" class="hover:text-orange-500 transition">Halaman Menu</a>
+      <a href="<?= base_url('katalog.php') ?>" class="hover:text-orange-500 transition">Halaman Menu</a>
       <span>/</span>
       <span class="text-orange-600">Detail Menu</span>
     </nav>

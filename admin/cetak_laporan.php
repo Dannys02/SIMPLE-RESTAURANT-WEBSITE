@@ -8,6 +8,12 @@
  *         Dalam format yang bisa dicetak atau save sebagai PDF
  */
 
+session_start();
+if (!isset($_SESSION['admin_logged_in'])) {
+    header("Location: login.php");
+    exit;
+}
+
 // Ambil data hanya yang statusnya 'selesai'
 include '../config/db.php';
 

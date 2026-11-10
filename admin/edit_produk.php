@@ -10,7 +10,8 @@
  */
 
 if (!defined('AKSES_AMAN')) {
-    die('Akses langsung tidak diizinkan!');
+    require_once __DIR__ . '/../config/db.php';
+    abort_error(403, 'Akses Langsung Ditolak', 'File komponen admin tidak dapat diakses secara langsung.', base_url('admin/index.php'), 'Ke Dashboard Admin');
 }
 
 // ========== PROSES UPDATE PRODUK ==========
@@ -45,7 +46,7 @@ if (isset($_POST['update_produk_ini'])) {
 
     // Jalankan query update
     if (mysqli_query($koneksi, $sql)) {
-        echo "<script>alert('DATA MENU BERHASIL DIUPDATE!'); window.location.href='index.php?page=produk';</script>";
+        echo "<script>alert('DATA MENU BERHASIL DIUPDATE!'); window.location.href='index.php?page=menu';</script>";
         exit;
     } else {
         echo "Error SQL: " . mysqli_error($koneksi);
@@ -54,13 +55,22 @@ if (isset($_POST['update_produk_ini'])) {
 
 // ========== AMBIL DATA PRODUK UNTUK DIEDIT ==========
 $id_edit = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT);
-$query = mysqli_query($koneksi, "SELECT * FROM produk WHERE id = $id_edit");
-$p = mysqli_fetch_assoc($query);
+$p = null;
+if ($id_edit && $id_edit > 0) {
+    $query = mysqli_query($koneksi, "SELECT * FROM produk WHERE id = $id_edit");
+    $p = mysqli_fetch_assoc($query);
+}
 
 // Cek apakah produk ditemukan
 if (!$p) {
-    echo "<div class='p-4 bg-red-100'>Produk Gak Ketemu! ID: $id_edit</div>";
-    exit;
+    http_response_code(404);
+    echo "<div class='max-w-xl mx-auto my-8 p-6 bg-white border border-slate-200 rounded-xl'>
+            <span class='inline-block px-2.5 py-1 bg-orange-100 text-orange-800 text-xs font-bold rounded mb-2'>HTTP Error 404</span>
+            <h2 class='text-lg font-bold text-slate-900 mb-1'>Menu Tidak Ditemukan</h2>
+            <p class='text-sm text-slate-600 mb-4'>Data menu dengan ID #" . htmlspecialchars((string)$id_edit) . " tidak ditemukan atau sudah dihapus.</p>
+            <a href='index.php?page=menu' class='inline-block px-4 py-2 bg-orange-600 text-white text-sm font-bold rounded-lg'>Kembali ke Manajemen Menu</a>
+          </div>";
+    return;
 }
 ?>
 
@@ -68,7 +78,7 @@ if (!$p) {
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
         <h2 class="text-xl font-bold text-slate-800">Edit Produk</h2>
-        <a href="index.php?page=produk" class="text-gray-500">Batal</a>
+        <a href="index.php?page=menu" class="text-gray-500">Batal</a>
     </div>
 
     <!-- Form Edit Produk -->

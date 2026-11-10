@@ -7,6 +7,21 @@ if (!isset($_SESSION['admin_logged_in'])) {
 include '../config/db.php';
 
 $page = $_GET['page'] ?? 'dashboard';
+$routes = [
+  'dashboard'      => 'dashboard.php',
+  'menu'           => 'crud_produk.php',
+  'produk'         => 'crud_produk.php', // Alias agar link index.php?page=produk tetap valid
+  'menu_edit'      => 'edit_produk.php',
+  'testimoni'      => 'crud_testimoni.php',
+  'testimoni_edit' => 'edit_testimoni.php',
+  'orders'         => 'orders.php',
+  'edit_order'     => 'edit_order.php',
+  'pengaturan'     => 'pengaturan.php',
+];
+
+if (!array_key_exists($page, $routes)) {
+  http_response_code(404);
+}
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -14,7 +29,7 @@ $page = $_GET['page'] ?? 'dashboard';
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <script src="https://cdn.tailwindcss.com"></script>
-  <title>Admin UMKM - <?= ucfirst($page) ?></title>
+  <title>Admin UMKM - <?= ucfirst(htmlspecialchars($page)) ?></title>
   <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
   <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
   <style>
@@ -48,37 +63,23 @@ $page = $_GET['page'] ?? 'dashboard';
   <main class="max-w-6xl mx-auto p-4 md:p-8">
     <div class="content-wrapper">
       <?php
-      switch ($page) {
-        case 'dashboard':
-          include 'dashboard.php';
-          break;
-        case 'menu':
-          include 'crud_produk.php';
-          break;
-        case 'menu_edit':
-          include 'edit_produk.php';
-          break;
-        case 'testimoni':
-          include 'crud_testimoni.php';
-          break;
-        case 'testimoni_edit':
-          include 'edit_testimoni.php';
-          break;
-        case 'orders':
-          include 'orders.php';
-          break;
-        case 'edit_order':
-          include 'edit_order.php';
-          break;
-        // case 'cetak_laporan':
-        //   include 'cetak_laporan.php';
-        //   break;
-        case 'pengaturan':
-          include 'pengaturan.php';
-          break;
-        default:
-          include 'dashboard.php';
-          break;
+      if (array_key_exists($page, $routes)) {
+        include $routes[$page];
+      } else {
+      ?>
+        <section class="max-w-xl mx-auto my-12 bg-white p-8 rounded-2xl border border-slate-200">
+          <span class="inline-block px-3 py-1 bg-orange-100 text-orange-800 text-xs font-bold rounded-md mb-3">
+            HTTP Error 404
+          </span>
+          <h1 class="text-2xl font-extrabold text-slate-900 mb-2">Halaman Admin Tidak Ditemukan</h1>
+          <p class="text-slate-600 text-sm leading-relaxed mb-6">
+            Rute halaman <code class="bg-slate-100 px-2 py-0.5 rounded font-mono text-slate-800">?page=<?= htmlspecialchars($page) ?></code> tidak terdaftar di sistem manajemen admin.
+          </p>
+          <a href="index.php?page=dashboard" class="inline-flex items-center justify-center min-h-[44px] px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white font-bold text-sm rounded-xl transition">
+            Kembali ke Dashboard
+          </a>
+        </section>
+      <?php
       }
       ?>
     </div>
@@ -89,7 +90,7 @@ $page = $_GET['page'] ?? 'dashboard';
       <a href="index.php?page=dashboard" class="flex-1 flex flex-col items-center justify-center h-full bg-slate-50 hover:bg-gray-100 <?= $page == 'dashboard' ? 'text-blue-600 border-t-2 border-blue-600 bg-blue-50' : 'text-gray-500' ?>">
         <span class="text-[10px] font-bold uppercase">Dashboard</span>
       </a>
-      <a href="index.php?page=menu" class="flex-1 flex flex-col items-center justify-center h-full bg-slate-50 hover:bg-gray-100 <?= $page == 'menu' || $page == 'menu_edit' ? 'text-blue-600 border-t-2 border-blue-600 bg-blue-50' : 'text-gray-500' ?>">
+      <a href="index.php?page=menu" class="flex-1 flex flex-col items-center justify-center h-full bg-slate-50 hover:bg-gray-100 <?= $page == 'menu' || $page == 'produk' || $page == 'menu_edit' ? 'text-blue-600 border-t-2 border-blue-600 bg-blue-50' : 'text-gray-500' ?>">
         <span class="text-[10px] font-bold uppercase">Menu</span>
       </a>
       <a href="index.php?page=testimoni" class="flex-1 flex flex-col items-center justify-center h-full bg-slate-50 hover:bg-gray-100 <?= $page == 'testimoni' || $page == 'testimoni_edit' ? 'text-blue-600 border-t-2 border-blue-600 bg-blue-50' : 'text-gray-500' ?>">

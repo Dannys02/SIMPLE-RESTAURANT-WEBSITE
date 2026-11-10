@@ -1,0 +1,21 @@
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Jika file atau folder fisik ada, sajikan langsung
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Clean URL opsional ke file PHP
+    RewriteRule ^katalog/?$ katalog.php [L,QSA]
+    RewriteRule ^detail/([0-9]+)/?$ detail.php?id=$1 [L,QSA]
+
+    # Semua URL lain yang tidak ditemukan diarahkan ke error.php (404)
+    RewriteRule ^ error.php?code=404 [L,QSA]
+</IfModule>
+
+ErrorDocument 403 /error.php?code=403
+ErrorDocument 404 /error.php?code=404
+ErrorDocument 500 /error.php?code=500
