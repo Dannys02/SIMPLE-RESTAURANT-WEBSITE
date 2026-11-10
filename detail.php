@@ -214,33 +214,40 @@ $nomor_tujuan = !empty($row_wa['nomor']) ? $row_wa['nomor'] : '6285645837298';
         </button>
       </div>
 
-      <form action="<?= base_url('api/create_order.php') ?>" method="POST" class="p-6 md:p-8">
+      <form id="orderForm" action="<?= base_url('api/create_order.php') ?>" method="POST" class="p-6 md:p-8" novalidate>
         <input type="hidden" name="produk_id" id="produk_id">
         <input type="text" name="perangkap" class="hidden" tabindex="-1" autocomplete="off" aria-hidden="true">
 
         <div class="space-y-4">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label for="nama_pembeli" class="block text-sm font-bold mb-1.5 text-slate-800">Nama Pembeli (Min. 3 Huruf)</label>
-              <input type="text" id="nama_pembeli" name="nama_pembeli" maxlength="50" placeholder="Nama lengkap penerima" class="w-full bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition" required>
+              <label for="nama_pembeli" class="block text-sm font-bold mb-1.5 text-slate-800">Nama Pembeli</label>
+              <input type="text" id="nama_pembeli" name="nama_pembeli" maxlength="50" placeholder="Nama lengkap penerima" aria-describedby="err_nama_pembeli" class="w-full bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition" required>
+              <span id="err_nama_pembeli" role="alert" class="hidden block mt-1.5 text-xs font-semibold text-red-700"></span>
             </div>
             <div>
               <label for="whatsapp_pembeli" class="block text-sm font-bold mb-1.5 text-slate-800">Nomor WhatsApp (10-14 Digit)</label>
-              <input type="tel" id="whatsapp_pembeli" name="whatsapp" placeholder="628123456789" pattern="[0-9]{10,14}" class="w-full bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition" required>
+              <input type="tel" id="whatsapp_pembeli" name="whatsapp" placeholder="628123456789" pattern="[0-9]{10,14}" aria-describedby="err_whatsapp_pembeli" class="w-full bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition" required>
+              <span id="err_whatsapp_pembeli" role="alert" class="hidden block mt-1.5 text-xs font-semibold text-red-700"></span>
             </div>
           </div>
 
           <div>
             <label for="stok_input" class="block text-sm font-bold mb-1.5 text-slate-800">Jumlah Porsi</label>
-            <input type="number" name="stok" id="stok_input" value="1" min="1" max="100" oninput="hitungTotal()" class="w-full sm:w-40 bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 focus:bg-white transition" required>
+            <input type="number" name="stok" id="stok_input" value="1" min="1" max="100" oninput="hitungTotal()" aria-describedby="err_stok_input" class="w-full sm:w-40 bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 focus:bg-white transition" required>
+            <span id="err_stok_input" role="alert" class="hidden block mt-1.5 text-xs font-semibold text-red-700"></span>
           </div>
 
           <div>
             <label for="alamat_pembeli" class="block text-sm font-bold mb-1.5 text-slate-800">Alamat Pengiriman Lengkap (Min. 10 Karakter)</label>
-            <textarea id="alamat_pembeli" name="alamat" maxlength="255" placeholder="Nama jalan, nomor rumah, RT/RW, dan patokan lokasi..." rows="3" class="w-full bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition" required></textarea>
+            <textarea id="alamat_pembeli" name="alamat" maxlength="255" placeholder="Nama jalan, nomor rumah, RT/RW, dan patokan lokasi..." rows="3" aria-describedby="err_alamat_pembeli" class="w-full bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition" required></textarea>
+            <span id="err_alamat_pembeli" role="alert" class="hidden block mt-1.5 text-xs font-semibold text-red-700"></span>
           </div>
 
-          <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($siteKey, ENT_QUOTES, 'UTF-8') ?>"></div>
+          <div>
+            <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($siteKey, ENT_QUOTES, 'UTF-8') ?>"></div>
+            <span id="err_recaptcha" role="alert" class="hidden block mt-1.5 text-xs font-semibold text-red-700"></span>
+          </div>
 
           <input type="hidden" name="harga" id="harga_modal">
 

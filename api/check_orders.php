@@ -11,7 +11,15 @@
  * Digunakan untuk: Real-time notification dashboard admin
  */
 
+session_start();
 include __DIR__ . '/../config/db.php';
+
+if (!isset($_SESSION['admin_logged_in'])) {
+    http_response_code(403);
+    header('Content-Type: application/json');
+    echo json_encode(['error' => 'Unauthorized', 'total_pending' => 0]);
+    exit;
+}
 
 // Query hitung pesanan dengan status pending
 $q = mysqli_query($koneksi, "SELECT COUNT(*) as total FROM pesanan WHERE status = 'pending'");

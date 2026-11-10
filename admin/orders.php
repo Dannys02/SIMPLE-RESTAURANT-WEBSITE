@@ -28,19 +28,37 @@ if ($action && $id > 0) {
 
     if ($action === 'setuju' && $status_saat_ini === 'pending') {
       if ($stok_sekarang >= $qty_pesan) {
-        mysqli_query($koneksi, "UPDATE pesanan SET status = 'setuju' WHERE id = $id");
-        mysqli_query($koneksi, "UPDATE produk SET stok = stok - $qty_pesan WHERE id = $pid");
+        mysqli_begin_transaction($koneksi);
+        $ok1 = mysqli_query($koneksi, "UPDATE produk SET stok = stok - $qty_pesan WHERE id = $pid AND stok >= $qty_pesan");
+        $affected = mysqli_affected_rows($koneksi);
+        $ok2 = ($ok1 && $affected > 0) ? mysqli_query($koneksi, "UPDATE pesanan SET status = 'setuju' WHERE id = $id AND status = 'pending'") : false;
+
+        if ($ok1 && $ok2 && $affected > 0) {
+          mysqli_commit($koneksi);
+        } else {
+          mysqli_rollback($koneksi);
+          echo "<script>alert('Gagal! Stok menu tidak mencukupi atau pesanan sudah diproses.'); window.location.href='index.php?page=orders';</script>";
+          exit;
+        }
       } else {
         echo "<script>alert('Gagal! Stok menu tidak mencukupi.'); window.location.href='index.php?page=orders';</script>";
         exit;
       }
     } elseif ($action === 'selesai' && $status_saat_ini === 'setuju') {
-      mysqli_query($koneksi, "UPDATE pesanan SET status = 'selesai' WHERE id = $id");
+      mysqli_query($koneksi, "UPDATE pesanan SET status = 'selesai' WHERE id = $id AND status = 'setuju'");
     } elseif ($action === 'tolak' && $status_saat_ini === 'pending') {
-      mysqli_query($koneksi, "UPDATE pesanan SET status = 'tolak' WHERE id = $id");
+      mysqli_query($koneksi, "UPDATE pesanan SET status = 'tolak' WHERE id = $id AND status = 'pending'");
     } elseif ($action === 'dibatalkan' && $status_saat_ini === 'setuju') {
-      mysqli_query($koneksi, "UPDATE produk SET stok = stok + $qty_pesan WHERE id = $pid");
-      mysqli_query($koneksi, "UPDATE pesanan SET status = 'dibatalkan' WHERE id = $id");
+      mysqli_begin_transaction($koneksi);
+      $ok1 = mysqli_query($koneksi, "UPDATE pesanan SET status = 'dibatalkan' WHERE id = $id AND status = 'setuju'");
+      $affected = mysqli_affected_rows($koneksi);
+      $ok2 = ($ok1 && $affected > 0) ? mysqli_query($koneksi, "UPDATE produk SET stok = stok + $qty_pesan WHERE id = $pid") : false;
+
+      if ($ok1 && $ok2) {
+        mysqli_commit($koneksi);
+      } else {
+        mysqli_rollback($koneksi);
+      }
     }
 
     echo "<script>window.location.href='index.php?page=orders';</script>";

@@ -368,6 +368,21 @@ $current_title = $page_titles[$page] ?? 'Halaman Tidak Ditemukan';
           }
         });
       }
+
+      // Sinkronisasi berkala jumlah pesanan pending di dashboard & sidebar setiap 15 detik
+      setInterval(function() {
+        fetch('<?= base_url('api/check_orders.php') ?>', { credentials: 'same-origin' })
+          .then(function(res) { return res.ok ? res.json() : null; })
+          .then(function(data) {
+            if (data && typeof data.total_pending === 'number') {
+              var pendingEl = document.getElementById('count-pending-ui');
+              if (pendingEl) {
+                pendingEl.textContent = data.total_pending;
+              }
+            }
+          })
+          .catch(function() {});
+      }, 15000);
     });
   </script>
   <script src="<?= base_url('src/js/orders.js') ?>"></script>

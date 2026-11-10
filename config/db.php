@@ -1,13 +1,15 @@
 <?php
 mysqli_report(MYSQLI_REPORT_OFF);
 
-$host = "127.0.0.1";
-$user = "root";
-$pass = "";
-$db   = "penjualan_umkm";
+$host = getenv('DB_HOST') ?: "127.0.0.1";
+$user = getenv('DB_USER') ?: "root";
+$pass = getenv('DB_PASS') !== false ? getenv('DB_PASS') : "";
+$db   = getenv('DB_NAME') ?: "penjualan_umkm";
 
-$siteKey   = "6LcBT4wsAAAAAMjKbTsmCm6W-tNGyG-3Ah0FNqOS";
-$secretKey = "6LcBT4wsAAAAAL_pBRW0tYfRCa9PQLIhQcb7kbm8";
+$siteKey       = getenv('RECAPTCHA_SITE_KEY') ?: "6LcBT4wsAAAAAMjKbTsmCm6W-tNGyG-3Ah0FNqOS";
+$secretKey     = getenv('RECAPTCHA_SECRET_KEY') ?: "6LcBT4wsAAAAAL_pBRW0tYfRCa9PQLIhQcb7kbm8";
+$telegramToken = getenv('TELEGRAM_BOT_TOKEN') ?: "8150467230:AAHpPlZWlVng8wHy7Vgk8wmKipMLFUh1dQg";
+$telegramChat  = getenv('TELEGRAM_CHAT_ID') ?: "6894989857";
 
 // Hitung base URL dinamis berdasarkan posisi folder project terhadap DOCUMENT_ROOT
 $projectRoot = str_replace('\\', '/', realpath(__DIR__ . '/..'));

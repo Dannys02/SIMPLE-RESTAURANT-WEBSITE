@@ -40,12 +40,12 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         abort_error(400, 'Verifikasi Keamanan Diperlukan', 'Mohon centang kotak reCAPTCHA terlebih dahulu sebelum mengirim pesanan.', base_url('#menu'), 'Kembali ke Menu');
     }
 
-    $secret = "6LcBT4wsAAAAAL_pBRW0tYfRCa9PQLIhQcb7kbm8";
+    $secret = $secretKey;
     $response = $_POST['g-recaptcha-response'];
 
     // Verifikasi token reCAPTCHA ke server Google
     $verify = @file_get_contents(
-        "https://www.google.com/recaptcha/api/siteverify?secret=$secret&response=$response"
+        "https://www.google.com/recaptcha/api/siteverify?secret=" . urlencode($secret) . "&response=" . urlencode($response)
     );
     $captcha = $verify ? json_decode($verify) : null;
 
@@ -87,7 +87,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $nama = trim(htmlspecialchars($_POST['nama_pembeli'] ?? ''));
     $wa_pembeli = preg_replace('/[^0-9]/', '', $_POST['whatsapp'] ?? '');
     $stok = (int)($_POST['stok'] ?? 0);
-    $harga = (int)($_POST['harga'] ?? 0);
     $alamat = trim(htmlspecialchars($_POST['alamat'] ?? ''));
 
     // Validasi nama minimal 3 karakter
@@ -105,8 +104,8 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         abort_error(400, 'Alamat Belum Lengkap', 'Alamat pengiriman harus terdiri dari minimal 10 karakter agar kurir mudah menemukan lokasi Anda.', base_url('#menu'), 'Kembali ke Menu');
     }
 
-    // ===== LANGKAH 6: CEK STOK PRODUK (Dengan Prepared Statement) =====
-    $stmt_stok = mysqli_prepare($koneksi, "SELECT nama, stok FROM produk WHERE id = ?");
+    // ===== LANGKAH 6: CEK STOK & AMBIL HARGA ASLI DARI DATABASE =====
+    $stmt_stok = mysqli_prepare($koneksi, "SELECT nama, harga, stok FROM produk WHERE id = ?");
     mysqli_stmt_bind_param($stmt_stok, "i", $produk_id);
     mysqli_stmt_execute($stmt_stok);
     $data_produk = mysqli_stmt_get_result($stmt_stok)->fetch_assoc();
@@ -116,33 +115,49 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         abort_error(400, 'Stok Menu Tidak Mencukupi', 'Maaf, stok menu yang Anda pilih sedang habis atau jumlah pesanan melebihi stok yang tersedia.', base_url('#menu'), 'Pilih Menu Lain');
     }
 
+    // Gunakan harga satuan asli dari database (mencegah manipulasi Inspect Element)
+    $harga_satuan = (int)$data_produk['harga'];
+    $total_bayar  = $harga_satuan * $stok;
+
     // ===== LANGKAH 7: SIMPAN PESANAN KE DATABASE =====
     $query = "INSERT INTO pesanan (nama_pembeli, whatsapp, stok, harga, alamat, produk_id, status, user_ip) 
               VALUES (?, ?, ?, ?, ?, ?, 'pending', ?)";
     $stmt_ins = mysqli_prepare($koneksi, $query);
-    mysqli_stmt_bind_param($stmt_ins, "ssiisis", $nama, $wa_pembeli, $stok, $harga, $alamat, $produk_id, $user_ip);
+    mysqli_stmt_bind_param($stmt_ins, "ssiisis", $nama, $wa_pembeli, $stok, $harga_satuan, $alamat, $produk_id, $user_ip);
 
     if (mysqli_stmt_execute($stmt_ins)) {
         $_SESSION['order_count']++;
         $nama_produk = $data_produk['nama'];
 
+        // Kirim notifikasi ke Telegram Admin secara non-blocking (timeout 2 detik)
+        if (!empty($telegramToken) && !empty($telegramChat)) {
+            $pesan_tg = "Pesanan baru masuk di RasaNusa!\n"
+                      . "Pembeli: {$nama} ({$wa_pembeli})\n"
+                      . "Menu: {$nama_produk} x {$stok} porsi\n"
+                      . "Total: Rp " . number_format($total_bayar, 0, ',', '.');
+            $ctx = stream_context_create(['http' => ['timeout' => 2]]);
+            @file_get_contents(
+                "https://api.telegram.org/bot{$telegramToken}/sendMessage?chat_id=" . urlencode($telegramChat) . "&text=" . urlencode($pesan_tg),
+                false,
+                $ctx
+            );
+        }
+
         // ===== LANGKAH 8: BUAT PESAN NOTIFIKASI UNTUK ADMIN =====
         $nomor_admin = $nomor_tujuan;
-        $pesan = "Halo Admin, saya ingin memesan 🙋‍♂️\n"
+        $pesan = "Halo Admin RasaNusa, saya ingin memesan:\n"
             . "------------------------------------------\n"
-            . "Berikut adalah data pesanan saya:\n\n"
-            . "📑 *DETAIL PESANAN*\n"
-            . "━━━━━━━━━━━━━━━━━━━━\n"
-            . "🍱 *Menu:* " . $nama_produk . "\n"
-            . "🔢 *Jumlah:* " . $stok . " porsi\n"
-            . "💰 *Total Estimasi:* Rp " . number_format($harga, 0, ',', '.') . "\n"
-            . "━━━━━━━━━━━━━━━━━━━━\n\n"
-            . "🚚 *DATA PENGIRIMAN*\n"
-            . "👤 *Nama:* " . $nama . "\n"
-            . "📍 *Alamat:* " . $alamat . "\n"
-            . "📱 *WhatsApp:* " . $wa_pembeli . "\n\n"
+            . "*DETAIL PESANAN*\n"
+            . "*Menu:* " . $nama_produk . "\n"
+            . "*Jumlah:* " . $stok . " porsi\n"
+            . "*Harga Satuan:* Rp " . number_format($harga_satuan, 0, ',', '.') . "\n"
+            . "*Total Pembayaran:* Rp " . number_format($total_bayar, 0, ',', '.') . "\n\n"
+            . "*DATA PENGIRIMAN*\n"
+            . "*Nama:* " . $nama . "\n"
+            . "*Alamat:* " . $alamat . "\n"
+            . "*WhatsApp:* " . $wa_pembeli . "\n"
             . "------------------------------------------\n"
-            . "Mohon segera diproses ya Min. Terima kasih! 🙏";
+            . "Mohon segera diproses ya. Terima kasih!";
 
         // Encode pesan untuk URL (WhatsApp API)
         $url_wa = "https://api.whatsapp.com/send?phone=" . $nomor_admin . "&text=" . urlencode($pesan);

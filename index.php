@@ -3,10 +3,11 @@ session_start();
 $_SESSION['load_time'] = time();
 include 'config/db.php';
 
-// Nomor Admin WhatsApp dari database
+// Nomor Admin WhatsApp dari database (di-encode Base64 untuk mencegah bot scraper HTML sederhana)
 $q_wa = mysqli_query($koneksi, "SELECT nomor FROM admins_wa LIMIT 1");
 $row_wa = $q_wa ? mysqli_fetch_assoc($q_wa) : null;
-$nomor_tujuan = !empty($row_wa['nomor']) ? $row_wa['nomor'] : '6285645837298';
+$nomor_tujuan = !empty($row_wa['nomor']) ? preg_replace('/[^0-9]/', '', $row_wa['nomor']) : '6285645837298';
+$nomor_tujuan_b64 = base64_encode($nomor_tujuan);
 
 // Hitung statistik menu nyata dari database
 $cek_jumlah = mysqli_query($koneksi, "SELECT COUNT(*) as total, SUM(IF(stok > 0, 1, 0)) as tersedia FROM produk");
@@ -466,32 +467,42 @@ $has_testi = ($query_testi && mysqli_num_rows($query_testi) > 0);
             </p>
 
             <form id="contactForm" onsubmit="event.preventDefault(); sendWA();" class="space-y-5" novalidate>
-              <div id="contactFeedback" role="alert" class="hidden p-3.5 rounded-lg text-sm font-semibold border"></div>
+              <!-- Honeypot anti-bot tersembunyi -->
+              <div class="hidden" aria-hidden="true">
+                <label for="website_hp">Jangan isi kolom ini</label>
+                <input type="text" id="website_hp" name="website_hp" tabindex="-1" autocomplete="off">
+              </div>
+
+              <div id="contactFeedback" role="status" class="hidden p-3.5 rounded-lg text-sm font-semibold border"></div>
 
               <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div>
                   <label for="nama" class="block text-sm font-bold text-slate-800 mb-1.5">Nama Anda</label>
-                  <input type="text" id="nama" name="nama" placeholder="Masukkan nama lengkap" class="w-full bg-[#FAF7F2] border border-stone-300 px-4 py-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition" required>
+                  <input type="text" id="nama" name="nama" minlength="3" maxlength="50" aria-describedby="err_contact_nama" placeholder="Masukkan nama lengkap" class="w-full bg-[#FAF7F2] border border-stone-300 px-4 py-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition" required>
+                  <span id="err_contact_nama" role="alert" class="hidden block mt-1.5 text-xs font-semibold text-red-700"></span>
                 </div>
                 <div>
                   <label for="email" class="block text-sm font-bold text-slate-800 mb-1.5">Alamat Email (Opsional)</label>
-                  <input type="email" id="email" name="email" placeholder="nama@email.com" class="w-full bg-[#FAF7F2] border border-stone-300 px-4 py-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition">
+                  <input type="email" id="email" name="email" maxlength="100" aria-describedby="err_contact_email" placeholder="nama@email.com" class="w-full bg-[#FAF7F2] border border-stone-300 px-4 py-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition">
+                  <span id="err_contact_email" role="alert" class="hidden block mt-1.5 text-xs font-semibold text-red-700"></span>
                 </div>
               </div>
 
               <div>
                 <label for="subjek" class="block text-sm font-bold text-slate-800 mb-1.5">Keperluan</label>
-                <select id="subjek" name="subjek" class="w-full bg-[#FAF7F2] border border-stone-300 px-4 py-3 rounded-lg text-slate-900 focus:bg-white transition">
+                <select id="subjek" name="subjek" aria-describedby="err_contact_subjek" class="w-full bg-[#FAF7F2] border border-stone-300 px-4 py-3 rounded-lg text-slate-900 focus:bg-white transition">
                   <option value="Tanya Menu">Tanya Ketersediaan Menu</option>
                   <option value="Pesanan Acara / Katering">Pesanan Acara / Porsi Besar</option>
                   <option value="Kritik & Saran">Masukan & Saran</option>
                   <option value="Kemitraan UMKM">Kerja Sama UMKM</option>
                 </select>
+                <span id="err_contact_subjek" role="alert" class="hidden block mt-1.5 text-xs font-semibold text-red-700"></span>
               </div>
 
               <div>
                 <label for="pesan" class="block text-sm font-bold text-slate-800 mb-1.5">Isi Pesan</label>
-                <textarea id="pesan" name="pesan" rows="4" placeholder="Tuliskan pertanyaan atau detail pesanan Anda..." class="w-full bg-[#FAF7F2] border border-stone-300 px-4 py-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition" required></textarea>
+                <textarea id="pesan" name="pesan" rows="4" minlength="10" maxlength="500" aria-describedby="err_contact_pesan" placeholder="Tuliskan pertanyaan atau detail pesanan Anda..." class="w-full bg-[#FAF7F2] border border-stone-300 px-4 py-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition" required></textarea>
+                <span id="err_contact_pesan" role="alert" class="hidden block mt-1.5 text-xs font-semibold text-red-700"></span>
               </div>
 
               <button type="submit" class="w-full min-h-[48px] bg-orange-700 hover:bg-orange-800 active:translate-y-px text-white py-3.5 px-6 rounded-lg font-bold text-sm transition-all">
@@ -578,33 +589,40 @@ $has_testi = ($query_testi && mysqli_num_rows($query_testi) > 0);
         </button>
       </div>
 
-      <form action="<?= base_url('api/create_order.php') ?>" method="POST" class="p-6 md:p-8">
+      <form id="orderForm" action="<?= base_url('api/create_order.php') ?>" method="POST" class="p-6 md:p-8" novalidate>
         <input type="hidden" name="produk_id" id="produk_id">
         <input type="text" name="perangkap" class="hidden" tabindex="-1" autocomplete="off" aria-hidden="true">
 
         <div class="space-y-4">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label for="nama_pembeli" class="block text-sm font-bold mb-1.5 text-slate-800">Nama Pembeli (Min. 3 Huruf)</label>
-              <input type="text" id="nama_pembeli" name="nama_pembeli" maxlength="50" placeholder="Nama lengkap penerima" class="w-full bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition" required>
+              <label for="nama_pembeli" class="block text-sm font-bold mb-1.5 text-slate-800">Nama Pembeli</label>
+              <input type="text" id="nama_pembeli" name="nama_pembeli" maxlength="50" placeholder="Nama lengkap penerima" aria-describedby="err_nama_pembeli" class="w-full bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition" required>
+              <span id="err_nama_pembeli" role="alert" class="hidden block mt-1.5 text-xs font-semibold text-red-700"></span>
             </div>
             <div>
               <label for="whatsapp_pembeli" class="block text-sm font-bold mb-1.5 text-slate-800">Nomor WhatsApp (10-14 Digit)</label>
-              <input type="tel" id="whatsapp_pembeli" name="whatsapp" placeholder="628123456789" pattern="[0-9]{10,14}" class="w-full bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition" required>
+              <input type="tel" id="whatsapp_pembeli" name="whatsapp" placeholder="628123456789" pattern="[0-9]{10,14}" aria-describedby="err_whatsapp_pembeli" class="w-full bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition" required>
+              <span id="err_whatsapp_pembeli" role="alert" class="hidden block mt-1.5 text-xs font-semibold text-red-700"></span>
             </div>
           </div>
 
           <div>
             <label for="stok_input" class="block text-sm font-bold mb-1.5 text-slate-800">Jumlah Porsi</label>
-            <input type="number" name="stok" id="stok_input" value="1" min="1" max="100" oninput="hitungTotal()" class="w-full sm:w-40 bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 focus:bg-white transition" required>
+            <input type="number" name="stok" id="stok_input" value="1" min="1" max="100" oninput="hitungTotal()" aria-describedby="err_stok_input" class="w-full sm:w-40 bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 focus:bg-white transition" required>
+            <span id="err_stok_input" role="alert" class="hidden block mt-1.5 text-xs font-semibold text-red-700"></span>
           </div>
 
           <div>
             <label for="alamat_pembeli" class="block text-sm font-bold mb-1.5 text-slate-800">Alamat Pengiriman Lengkap (Min. 10 Karakter)</label>
-            <textarea id="alamat_pembeli" name="alamat" maxlength="255" placeholder="Nama jalan, nomor rumah, RT/RW, dan patokan lokasi..." rows="3" class="w-full bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition" required></textarea>
+            <textarea id="alamat_pembeli" name="alamat" maxlength="255" placeholder="Nama jalan, nomor rumah, RT/RW, dan patokan lokasi..." rows="3" aria-describedby="err_alamat_pembeli" class="w-full bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition" required></textarea>
+            <span id="err_alamat_pembeli" role="alert" class="hidden block mt-1.5 text-xs font-semibold text-red-700"></span>
           </div>
 
-          <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($siteKey, ENT_QUOTES, 'UTF-8') ?>"></div>
+          <div>
+            <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($siteKey, ENT_QUOTES, 'UTF-8') ?>"></div>
+            <span id="err_recaptcha" role="alert" class="hidden block mt-1.5 text-xs font-semibold text-red-700"></span>
+          </div>
 
           <input type="hidden" name="harga" id="harga_modal">
 
@@ -628,19 +646,148 @@ $has_testi = ($query_testi && mysqli_num_rows($query_testi) > 0);
 
   <script src="src/js/index.js"></script>
   <script>
-    function sendWA() {
-      const nama = document.getElementById('nama').value.trim();
-      const email = document.getElementById('email').value.trim();
-      const subjek = document.getElementById('subjek').value;
-      const pesan = document.getElementById('pesan').value.trim();
-      const feedback = document.getElementById('contactFeedback');
-      const nomorWA = "<?= htmlspecialchars($nomor_tujuan, ENT_QUOTES, 'UTF-8') ?>";
+    const encodedAdminWA = "<?= htmlspecialchars($nomor_tujuan_b64, ENT_QUOTES, 'UTF-8') ?>";
+    let lastContactSubmitTime = 0;
 
-      if (nama === "" || pesan === "") {
-        feedback.className = "p-3.5 rounded-lg text-sm font-semibold border bg-red-50 text-red-800 border-red-200";
-        feedback.textContent = "Mohon lengkapi Nama Anda dan Isi Pesan sebelum mengirim.";
+    function getAdminWA() {
+      try {
+        return atob(encodedAdminWA);
+      } catch (e) {
+        return "";
+      }
+    }
+
+    function setContactError(inputEl, spanId, msg) {
+      const span = document.getElementById(spanId);
+      if (span) {
+        span.textContent = msg;
+        span.classList.remove('hidden');
+      }
+      if (inputEl) {
+        inputEl.classList.add('border-red-600', 'focus:border-red-600');
+        inputEl.classList.remove('border-stone-300');
+        inputEl.setAttribute('aria-invalid', 'true');
+      }
+    }
+
+    function clearContactError(inputEl, spanId) {
+      const span = document.getElementById(spanId);
+      if (span) {
+        span.textContent = '';
+        span.classList.add('hidden');
+      }
+      if (inputEl) {
+        inputEl.classList.remove('border-red-600', 'focus:border-red-600');
+        inputEl.classList.add('border-stone-300');
+        inputEl.removeAttribute('aria-invalid');
+      }
+    }
+
+    function validateContactNama() {
+      const el = document.getElementById('nama');
+      const val = el.value.trim();
+      if (!val) {
+        setContactError(el, 'err_contact_nama', 'Nama lengkap wajib diisi.');
+        return false;
+      }
+      if (val.length < 3 || val.length > 50) {
+        setContactError(el, 'err_contact_nama', 'Nama harus terdiri dari 3 hingga 50 karakter.');
+        return false;
+      }
+      clearContactError(el, 'err_contact_nama');
+      return true;
+    }
+
+    function validateContactEmail() {
+      const el = document.getElementById('email');
+      const val = el.value.trim();
+      if (!val) {
+        clearContactError(el, 'err_contact_email');
+        return true;
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (val.length > 100 || !emailRegex.test(val)) {
+        setContactError(el, 'err_contact_email', 'Masukkan format alamat email yang valid (contoh: nama@email.com).');
+        return false;
+      }
+      clearContactError(el, 'err_contact_email');
+      return true;
+    }
+
+    function validateContactSubjek() {
+      const el = document.getElementById('subjek');
+      const allowed = ['Tanya Menu', 'Pesanan Acara / Katering', 'Kritik & Saran', 'Kemitraan UMKM'];
+      if (!allowed.includes(el.value)) {
+        setContactError(el, 'err_contact_subjek', 'Pilih salah satu keperluan yang tersedia.');
+        return false;
+      }
+      clearContactError(el, 'err_contact_subjek');
+      return true;
+    }
+
+    function validateContactPesan() {
+      const el = document.getElementById('pesan');
+      const val = el.value.trim();
+      if (!val) {
+        setContactError(el, 'err_contact_pesan', 'Isi pesan wajib ditulis.');
+        return false;
+      }
+      if (val.length < 10 || val.length > 500) {
+        setContactError(el, 'err_contact_pesan', 'Isi pesan harus terdiri dari 10 hingga 500 karakter.');
+        return false;
+      }
+      clearContactError(el, 'err_contact_pesan');
+      return true;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const namaEl = document.getElementById('nama');
+      const emailEl = document.getElementById('email');
+      const subjekEl = document.getElementById('subjek');
+      const pesanEl = document.getElementById('pesan');
+
+      if (namaEl) namaEl.addEventListener('input', validateContactNama);
+      if (emailEl) emailEl.addEventListener('input', validateContactEmail);
+      if (subjekEl) subjekEl.addEventListener('change', validateContactSubjek);
+      if (pesanEl) pesanEl.addEventListener('input', validateContactPesan);
+    });
+
+    function sendWA() {
+      const hp = document.getElementById('website_hp');
+      if (hp && hp.value !== '') {
+        return; // Honeypot terisi oleh bot otomatis
+      }
+
+      const feedback = document.getElementById('contactFeedback');
+      feedback.classList.add('hidden');
+
+      const vNama = validateContactNama();
+      const vEmail = validateContactEmail();
+      const vSubjek = validateContactSubjek();
+      const vPesan = validateContactPesan();
+
+      if (!vNama || !vEmail || !vSubjek || !vPesan) {
+        if (!vNama) document.getElementById('nama').focus();
+        else if (!vEmail) document.getElementById('email').focus();
+        else if (!vSubjek) document.getElementById('subjek').focus();
+        else if (!vPesan) document.getElementById('pesan').focus();
         return;
       }
+
+      const now = Date.now();
+      if (now - lastContactSubmitTime < 10000) {
+        feedback.className = "p-3.5 rounded-lg text-sm font-semibold border bg-amber-50 text-amber-900 border-amber-200";
+        feedback.textContent = "Mohon tunggu beberapa detik sebelum mengirim pesan kembali.";
+        return;
+      }
+      lastContactSubmitTime = now;
+
+      // Sanitasi karakter kontrol dari input
+      const nama = document.getElementById('nama').value.replace(/[\u0000-\u001F\u007F]/g, '').trim().slice(0, 50);
+      const email = document.getElementById('email').value.replace(/[\u0000-\u001F\u007F]/g, '').trim().slice(0, 100);
+      const subjek = document.getElementById('subjek').value;
+      const pesan = document.getElementById('pesan').value.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, 500);
+      const nomorWA = getAdminWA();
 
       feedback.className = "p-3.5 rounded-lg text-sm font-semibold border bg-emerald-50 text-emerald-800 border-emerald-200";
       feedback.textContent = "Membuka WhatsApp untuk meneruskan pesan Anda ke Admin RasaNusa...";
@@ -653,15 +800,17 @@ $has_testi = ($query_testi && mysqli_num_rows($query_testi) > 0);
         + `------------------------------------------\n`
         + `*Pesan:* ${pesan}`;
 
-      const url = "https://api.whatsapp.com/send?phone=" + nomorWA + "&text=" + encodeURIComponent(teksPesan);
-      window.open(url, '_blank');
+      const url = "https://api.whatsapp.com/send?phone=" + encodeURIComponent(nomorWA) + "&text=" + encodeURIComponent(teksPesan);
+      const newWin = window.open(url, '_blank', 'noopener,noreferrer');
+      if (newWin) newWin.opener = null;
     }
 
     const handleContactClick = () => {
-      const phoneNumber = "<?= htmlspecialchars($nomor_tujuan, ENT_QUOTES, 'UTF-8') ?>";
+      const phoneNumber = getAdminWA();
       const message = "Halo Admin RasaNusa, saya ingin bertanya mengenai ketersediaan menu hari ini. Mohon informasinya, terima kasih!";
-      const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-      window.open(url, "_blank");
+      const url = `https://wa.me/${encodeURIComponent(phoneNumber)}?text=${encodeURIComponent(message)}`;
+      const newWin = window.open(url, "_blank", "noopener,noreferrer");
+      if (newWin) newWin.opener = null;
     };
   </script>
 </body>

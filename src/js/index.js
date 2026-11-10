@@ -46,6 +46,124 @@ document.addEventListener("DOMContentLoaded", function () {
 
 const orderModal = document.getElementById("orderModal");
 const body = document.body;
+let currentMaxStok = 100;
+
+function setFieldError(inputEl, errSpanId, message) {
+    const span = document.getElementById(errSpanId);
+    if (span) {
+        span.textContent = message;
+        span.classList.remove("hidden");
+    }
+    if (inputEl) {
+        inputEl.classList.add("border-red-600", "focus:border-red-600");
+        inputEl.classList.remove("border-stone-200", "focus:border-amber-700");
+        inputEl.setAttribute("aria-invalid", "true");
+    }
+}
+
+function clearFieldError(inputEl, errSpanId) {
+    const span = document.getElementById(errSpanId);
+    if (span) {
+        span.textContent = "";
+        span.classList.add("hidden");
+    }
+    if (inputEl) {
+        inputEl.classList.remove("border-red-600", "focus:border-red-600");
+        inputEl.classList.add("border-stone-200", "focus:border-amber-700");
+        inputEl.removeAttribute("aria-invalid");
+    }
+}
+
+function clearAllOrderErrors() {
+    clearFieldError(document.getElementById("nama_pembeli"), "err_nama_pembeli");
+    clearFieldError(document.getElementById("whatsapp_pembeli"), "err_whatsapp_pembeli");
+    clearFieldError(document.getElementById("stok_input"), "err_stok_input");
+    clearFieldError(document.getElementById("alamat_pembeli"), "err_alamat_pembeli");
+    clearFieldError(null, "err_recaptcha");
+}
+
+function validateNamaPembeli() {
+    const input = document.getElementById("nama_pembeli");
+    if (!input) return true;
+    const val = input.value.trim();
+    if (!val) {
+        setFieldError(input, "err_nama_pembeli", "Nama lengkap wajib diisi.");
+        return false;
+    }
+    if (val.length < 3 || val.length > 50) {
+        setFieldError(input, "err_nama_pembeli", "Nama pembeli harus terdiri dari 3 hingga 50 karakter.");
+        return false;
+    }
+    clearFieldError(input, "err_nama_pembeli");
+    return true;
+}
+
+function validateWhatsappPembeli() {
+    const input = document.getElementById("whatsapp_pembeli");
+    if (!input) return true;
+    const val = input.value.trim();
+    if (!val) {
+        setFieldError(input, "err_whatsapp_pembeli", "Nomor WhatsApp wajib diisi.");
+        return false;
+    }
+    if (!/^[0-9]{10,14}$/.test(val)) {
+        setFieldError(input, "err_whatsapp_pembeli", "Nomor WhatsApp harus berupa 10 hingga 14 digit angka (contoh: 081234567890).");
+        return false;
+    }
+    clearFieldError(input, "err_whatsapp_pembeli");
+    return true;
+}
+
+function validateStokInput() {
+    const input = document.getElementById("stok_input");
+    if (!input) return true;
+    const rawVal = input.value.trim();
+    const val = Number(rawVal);
+    if (!rawVal || !Number.isInteger(val) || val < 1) {
+        setFieldError(input, "err_stok_input", "Jumlah porsi minimal 1.");
+        return false;
+    }
+    if (val > currentMaxStok) {
+        setFieldError(input, "err_stok_input", "Jumlah melebihi sisa stok tersedia (" + currentMaxStok + " porsi).");
+        return false;
+    }
+    if (val > 100) {
+        setFieldError(input, "err_stok_input", "Jumlah pesanan maksimal 100 porsi per transaksi.");
+        return false;
+    }
+    clearFieldError(input, "err_stok_input");
+    return true;
+}
+
+function validateAlamatPembeli() {
+    const input = document.getElementById("alamat_pembeli");
+    if (!input) return true;
+    const val = input.value.trim();
+    if (!val) {
+        setFieldError(input, "err_alamat_pembeli", "Alamat lengkap pengiriman wajib diisi.");
+        return false;
+    }
+    if (val.length < 10 || val.length > 255) {
+        setFieldError(input, "err_alamat_pembeli", "Alamat harus terdiri dari 10 hingga 255 karakter beserta patokan lokasi.");
+        return false;
+    }
+    clearFieldError(input, "err_alamat_pembeli");
+    return true;
+}
+
+function validateRecaptcha() {
+    const span = document.getElementById("err_recaptcha");
+    if (!span) return true;
+    if (typeof grecaptcha !== "undefined" && typeof grecaptcha.getResponse === "function") {
+        const response = grecaptcha.getResponse();
+        if (!response || response.length === 0) {
+            setFieldError(null, "err_recaptcha", "Silakan centang verifikasi keamanan reCAPTCHA terlebih dahulu.");
+            return false;
+        }
+    }
+    clearFieldError(null, "err_recaptcha");
+    return true;
+}
 
 /**
  * Fungsi: openModal()
@@ -61,20 +179,28 @@ function openModal(product) {
     // 2. Masukkan Harga ke input hidden (untuk perhitungan harga total)
     document.getElementById("harga_modal").value = product.harga;
 
-    // 3. Update Subtitle di modal (tampilkan nama produk)
+    // 3. Simpan batas stok produk
+    currentMaxStok = parseInt(product.stok, 10) || 100;
+    const stokInput = document.getElementById("stok_input");
+    if (stokInput) {
+        stokInput.max = currentMaxStok;
+        stokInput.value = 1;
+    }
+
+    // 4. Update Subtitle di modal (tampilkan nama produk)
     const subTitle = document.getElementById("modalSubTitle");
     if (subTitle) {
         subTitle.innerText = product.nama;
     }
 
-    // 4. RESET Jumlah Beli ke 1 setiap kali membuka modal
-    document.getElementById("stok_input").value = 1;
+    // 5. Bersihkan pesan error sebelumnya
+    clearAllOrderErrors();
 
-    // 5. Munculkan Modal (hapus class hidden)
+    // 6. Munculkan Modal (hapus class hidden)
     orderModal.classList.remove("hidden");
     body.style.overflow = "hidden";  // Lock scroll saat modal terbuka
 
-    // 6. Jalankan hitung total awal
+    // 7. Jalankan hitung total awal
     hitungTotal();
 }
 
@@ -83,9 +209,46 @@ function openModal(product) {
  * Tujuan: Menutup modal form pemesanan
  */
 function closeModal() {
+    clearAllOrderErrors();
     orderModal.classList.add("hidden");
     body.style.overflow = "auto";  // Unlock scroll
 }
+
+document.addEventListener("DOMContentLoaded", function () {
+    const orderForm = document.getElementById("orderForm");
+    if (!orderForm) return;
+
+    const namaInput = document.getElementById("nama_pembeli");
+    const waInput = document.getElementById("whatsapp_pembeli");
+    const stokInput = document.getElementById("stok_input");
+    const alamatInput = document.getElementById("alamat_pembeli");
+
+    if (namaInput) namaInput.addEventListener("input", validateNamaPembeli);
+    if (waInput) waInput.addEventListener("input", validateWhatsappPembeli);
+    if (stokInput) stokInput.addEventListener("input", validateStokInput);
+    if (alamatInput) alamatInput.addEventListener("input", validateAlamatPembeli);
+
+    orderForm.addEventListener("submit", function (e) {
+        const isNamaValid = validateNamaPembeli();
+        const isWaValid = validateWhatsappPembeli();
+        const isStokValid = validateStokInput();
+        const isAlamatValid = validateAlamatPembeli();
+        const isRecaptchaValid = validateRecaptcha();
+
+        if (!isNamaValid || !isWaValid || !isStokValid || !isAlamatValid || !isRecaptchaValid) {
+            e.preventDefault();
+            if (!isNamaValid && namaInput) {
+                namaInput.focus();
+            } else if (!isWaValid && waInput) {
+                waInput.focus();
+            } else if (!isStokValid && stokInput) {
+                stokInput.focus();
+            } else if (!isAlamatValid && alamatInput) {
+                alamatInput.focus();
+            }
+        }
+    });
+});
 
 /**
  * Fungsi: hitungTotal()

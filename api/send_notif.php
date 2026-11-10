@@ -1,28 +1,23 @@
 <?php
-/**
- * ============================================
- * API: KIRIM NOTIFIKASI KE TELEGRAM
- * ============================================
- * Fungsi: Mengirim notifikasi ke admin via Telegram
- *         ketika ada pesanan pending baru
- * 
- * Parameter GET:
- * - jumlah: Jumlah pesanan pending yang ingin diinformasikan
- * 
- * Cara kerja:
- * Menggunakan Telegram Bot untuk push notification real-time
- */
+session_start();
+include __DIR__ . '/../config/db.php';
 
-// Parameter: Jumlah pesanan pending yang akan dinotifikasi
-$jumlah = $_GET['jumlah'];
+if (!isset($_SESSION['admin_logged_in'])) {
+    abort_error(403, 'Akses Ditolak', 'Endpoint notifikasi ini hanya dapat diakses oleh pengelola yang sedang masuk.', base_url('admin/login.php'), 'Masuk Admin');
+}
 
-// Konfigurasi Telegram Bot
-$token = "8150467230:AAHpPlZWlVng8wHy7Vgk8wmKipMLFUh1dQg";  // Bot token
-$chat_id = "6894989857";                                      // Chat ID admin
+$jumlah = isset($_GET['jumlah']) ? (int)$_GET['jumlah'] : 0;
 
-// Pesan notifikasi
-$pesan = "Admin, ada $jumlah pesanan pending baru dari website!";
+if ($jumlah > 0 && !empty($telegramToken) && !empty($telegramChat)) {
+    $pesan = "Admin RasaNusa, terdapat {$jumlah} pesanan pending baru di website.";
+    $ctx = stream_context_create(['http' => ['timeout' => 3]]);
+    @file_get_contents(
+        "https://api.telegram.org/bot{$telegramToken}/sendMessage?chat_id=" . urlencode($telegramChat) . "&text=" . urlencode($pesan),
+        false,
+        $ctx
+    );
+}
 
-// Kirim ke Telegram API
-file_get_contents("https://api.telegram.org/bot$token/sendMessage?chat_id=$chat_id&text=" . urlencode($pesan));
+header('Content-Type: application/json');
+echo json_encode(['status' => 'ok', 'notified_count' => $jumlah]);
 ?>
