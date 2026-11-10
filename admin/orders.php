@@ -18,7 +18,7 @@ if ($action && $id > 0) {
                 JOIN produk pr ON p.produk_id = pr.id
                 WHERE p.id = $id";
   $res_cek = mysqli_query($koneksi, $query_cek);
-  $data = mysqli_fetch_assoc($res_cek);
+  $data = $res_cek ? mysqli_fetch_assoc($res_cek) : null;
 
   if ($data) {
     $qty_pesan = (int)$data['qty_pesan'];
@@ -31,7 +31,7 @@ if ($action && $id > 0) {
         mysqli_query($koneksi, "UPDATE pesanan SET status = 'setuju' WHERE id = $id");
         mysqli_query($koneksi, "UPDATE produk SET stok = stok - $qty_pesan WHERE id = $pid");
       } else {
-        echo "<script>alert('Gagal! Stok tidak mencukupi.'); window.location.href='index.php?page=orders';</script>";
+        echo "<script>alert('Gagal! Stok menu tidak mencukupi.'); window.location.href='index.php?page=orders';</script>";
         exit;
       }
     } elseif ($action === 'selesai' && $status_saat_ini === 'setuju') {
@@ -63,187 +63,221 @@ $query = "SELECT p.*, pr.nama as nama_produk, pr.harga, pr.stok as stok_saat_ini
 $all_orders = mysqli_query($koneksi, $query);
 ?>
 
-<div class="mb-6 w-full flex flex-col md:flex-row md:justify-between">
-  <h1 class="text-2xl font-bold text-slate-800">Daftar Pesanan Masuk</h1>
-  <a href="cetak_laporan.php" target="_blank" class="bg-orange-600 mt-2 md:mt-0 w-fit text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-orange-700 shadow-md">
-    print Laporan Penjualan
+<!-- Header Halaman Pesanan -->
+<header class="flex flex-col sm:flex-row sm:justify-between sm:items-end border-b border-stone-200 pb-6 mb-8 gap-4">
+  <div>
+    <h1 class="font-serif-editorial text-2xl sm:text-3xl font-bold text-slate-900">Daftar Pesanan Masuk</h1>
+    <p class="text-sm text-slate-600 mt-1">
+      Verifikasi pesanan baru, kurangi stok secara otomatis saat disetujui, dan kirim konfirmasi via WhatsApp.
+    </p>
+  </div>
+
+  <a
+    href="cetak_laporan.php"
+    target="_blank"
+    class="min-h-[44px] inline-flex items-center justify-center px-5 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition shrink-0 w-fit"
+  >
+    Cetak Laporan Penjualan
   </a>
-</div>
+</header>
 
-<div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden overflow-x-auto">
-  <table id="tabelPesanan" class="w-full text-left border-collapse">
-    <thead class="bg-slate-50 border-b border-slate-200">
-      <tr>
-        <th class="p-4 text-xs font-bold uppercase text-slate-500">Pembeli</th>
-        <th class="p-4 text-xs font-bold uppercase text-slate-500">Menu</th>
-        <th class="p-4 text-xs font-bold uppercase text-slate-500">Alamat</th>
-        <th class="p-4 text-xs font-bold uppercase text-slate-500 text-center">Status</th>
-        <th class="p-4 text-xs font-bold uppercase text-slate-500 text-center">Aksi</th>
-      </tr>
-    </thead>
-    <tbody class="divide-y divide-slate-100">
-      <?php while ($row = mysqli_fetch_assoc($all_orders)): ?>
-        <?php
-        $clean_phone = preg_replace('/[^0-9]/', '', $row['whatsapp']);
-        if (substr($clean_phone, 0, 1) === '0') $clean_phone = '62' . substr($clean_phone, 1);
-
-        $format_harga = "Rp " . number_format($row['harga'] * $row['stok'], 0, ',', '.');
-
-        $msg_pending = urlencode(
-          "🟡 *KONFIRMASI PESANAN - MENUNGGU PROSES*\n"
-            . "------------------------------------------\n"
-            . "Halo *{$row['nama_pembeli']}*,\n\n"
-            . "Terima kasih telah mempercayai kami! Pesanan Anda telah berhasil kami terima dan saat ini sedang dalam tahap verifikasi. 📦\n\n"
-            . "📑 *DETAIL PESANAN ANDA*\n"
-            . "━━━━━━━━━━━━━━━━━━━━\n"
-            . "🍱 *Menu:* {$row['nama_produk']}\n"
-            . "🔢 *Jumlah:* {$row['stok']} porsi\n"
-            . "💰 *Total:* {$format_harga}\n"
-            . "━━━━━━━━━━━━━━━━━━━━\n\n"
-            . "Tim kami akan segera menghubungi Anda melalui WhatsApp untuk konfirmasi lebih lanjut. Mohon kesabaran Anda ya. Terima kasih! 🙏"
-        );
-
-        $msg_setuju = urlencode(
-          "✅ *PESANAN DIKONFIRMASI*\n"
-            . "------------------------------------------\n"
-            . "Halo *{$row['nama_pembeli']}*,\n\n"
-            . "Pesanan Anda telah kami konfirmasi dan sedang kami siapkan dengan sepenuh hati. 📦\n\n"
-            . "📑 *DETAIL PESANAN*\n"
-            . "━━━━━━━━━━━━━━━━━━━━\n"
-            . "🍱 *Menu:* {$row['nama_produk']}\n"
-            . "🔢 *Jumlah:* {$row['stok']} porsi\n"
-            . "💰 *Total:* {$format_harga}\n"
-            . "━━━━━━━━━━━━━━━━━━━━\n\n"
-            . "Kami akan segera menginformasikan perkembangan pesanan Anda. Terima kasih atas kepercayaan Anda! 🙏"
-        );
-
-        $msg_tolak = urlencode(
-          "❌ *PESANAN TIDAK DAPAT DIPROSES*\n"
-            . "------------------------------------------\n"
-            . "Halo *{$row['nama_pembeli']}*,\n\n"
-            . "Kami mohon maaf atas ketidaknyamanan ini. Pesanan Anda untuk:\n"
-            . "🍱 *{$row['nama_produk']}*\n\n"
-            . "Saat ini *tidak dapat kami proses* dikarenakan stok sedang tidak tersedia. 😔\n"
-            . "------------------------------------------\n"
-            . "Kami mengundang Anda untuk mengeksplorasi pilihan menu lainnya di katalog kami. Semoga ada yang cocok untuk Anda!"
-        );
-
-        $msg_selesai = urlencode(
-          "🔵 *PESANAN TELAH SELESAI*\n"
-            . "------------------------------------------\n"
-            . "Halo *{$row['nama_pembeli']}*,\n\n"
-            . "Pesanan Anda untuk:\n"
-            . "🍱 *{$row['nama_produk']}*\n\n"
-            . "Telah *SELESAI* dan kami harap semuanya berjalan sesuai harapan Anda. 🎉\n"
-            . "------------------------------------------\n"
-            . "Terima kasih telah berbelanja bersama kami. Kami tunggu kunjungan Anda berikutnya!"
-        );
-
-        $msg_batal = urlencode(
-          "⚠️ *PESANAN DIBATALKAN*\n"
-            . "------------------------------------------\n"
-            . "Halo *{$row['nama_pembeli']}*,\n\n"
-            . "Kami mengonfirmasi bahwa pesanan Anda untuk:\n"
-            . "🍱 *{$row['nama_produk']}*\n\n"
-            . "Telah resmi *DIBATALKAN*. 🚫\n"
-            . "------------------------------------------\n"
-            . "Apabila pembatalan ini bukan atas permintaan Anda, silakan segera hubungi tim kami untuk mendapatkan bantuan. Terima kasih."
-        );
-
-        ?>
-        <tr class="hover:bg-slate-50 transition-colors">
-          <td class="p-4 text-sm">
-            <div class="font-bold">
-              <?= htmlspecialchars($row['nama_pembeli']) ?>
-            </div>
-            <span class="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tighter
-            <?= $row['status'] == 'setuju' ? 'bg-green-100 text-green-700'
-              : ($row['status'] == 'tolak' ? 'bg-red-100 text-red-700'
-                : ($row['status'] == 'selesai' ? 'bg-blue-100 text-blue-500'
-                  : ($row['status'] == 'dibatalkan' ? 'bg-gray-100 text-gray-500'
-                    : 'bg-amber-100 text-amber-700'))) ?>
-            ">
-              <?= $row['status'] ?>
-            </span>
-            <p class="mt-2 text-gray-600 font-bold"><?= $row['whatsapp'] ?></p>
-          </td>
-          <td class="p-4 text-sm">
-            <span class="font-medium"><?= $row['nama_produk'] ?></span> <br>
-            <small class="text-slate-400">Order: <?= $row['stok'] ?> | Sisa: <?= $row['stok_saat_ini'] ?></small>
-          </td>
-          <td class="p-4 text-sm text-slate-600 italic"><?= htmlspecialchars($row['alamat']) ?></td>
-          <td class="p-4 text-center whitespace-nowrap">
-            <div class="flex flex-col gap-2 max-w-[130px] mx-auto">
-              <?php if ($row['status'] == 'pending'): ?>
-                <button type="button" onclick="window.open('https://api.whatsapp.com/send?phone=<?= $clean_phone ?>&text=<?= $msg_pending ?>', '_blank')"
-                  class="bg-gray-100 text-gray-500 py-2 rounded-lg text-[10px] font-bold border border-gray-200 hover:bg-emerald-50 hover:text-emerald-600">
-                  🟢 HUBUNGI WA</span>
-                </button>
-                <button type="button" onclick="ubahStatus('setuju', <?= $row['id'] ?>, <?= $row['stok'] ?>, <?= $row['stok_saat_ini'] ?>, '<?= $row['nama_produk'] ?>')"
-                  class="bg-emerald-500 text-white py-2 rounded-lg text-[10px] font-black shadow-sm hover:bg-emerald-600">
-                  SETUJUI
-                </button>
-                <button type="button" onclick="ubahStatus('tolak', <?= $row['id'] ?>)"
-                  class="bg-white border-2 border-red-500 text-red-500 py-2 rounded-lg text-[10px] font-black hover:bg-red-50">
-                  TOLAK
-                </button>
-
-              <?php elseif ($row['status'] == 'setuju'): ?>
-                <div class="flex flex-col  gap-1">
-                  <button type="button" onclick="window.open('https://api.whatsapp.com/send?phone=<?= $clean_phone ?>&text=<?= $msg_setuju ?>', '_blank')"
-                    class="bg-gray-100 text-gray-500 py-2 rounded-lg text-[10px] font-bold border border-gray-200 hover:bg-emerald-50 hover:text-emerald-600">
-                    🟢 HUBUNGI WA
-                    </span>
-                  </button>
-                  <button type="button" onclick="confirmSelesai(<?= $row['id'] ?>)"
-                    class="bg-emerald-500 text-white py-2 rounded-lg text-[10px] font-black shadow-sm hover:bg-emerald-600">
-                    Selesaikan
-                  </button>
-                  <button type="button" onclick="confirmBatal(<?= $row['id'] ?>)"
-                    class="bg-slate-100 text-slate-400 p-2 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-sm">
-                    ✕
-                  </button>
-                </div>
-                <span class="text-[9px] text-green-500 font-bold italic mt-1 uppercase">Setuju</span>
-
-              <?php elseif ($row['status'] == 'selesai'): ?>
-                <div class="flex flex-col  gap-1">
-                  <button type="button" onclick="window.open('https://api.whatsapp.com/send?phone=<?= $clean_phone ?>&text=<?= $msg_selesai ?>', '_blank')"
-                    class="bg-gray-100 text-gray-500 py-2 rounded-lg text-[10px] font-bold border border-gray-200 hover:bg-emerald-50 hover:text-emerald-600">
-                    🟢 HUBUNGI WA
-                    </span>
-                  </button>
-                </div>
-                <span class="text-[9px] text-blue-500 font-bold italic mt-1 uppercase">Selesai</span>
-
-              <?php else : ?>
-                <button type="button" onclick="window.open('https://api.whatsapp.com/send?phone=<?= $clean_phone ?>&text=<?= $row['status'] == 'tolak' ? $msg_tolak : $msg_batal ?>', '_blank')"
-                  class="bg-gray-100 text-gray-500 py-2 rounded-lg text-[10px] font-bold border border-gray-200 hover:bg-emerald-50 hover:text-emerald-600">
-                  🟢 HUBUNGI WA
-                </button>
-                <span class="text-[9px] text-red-500 font-bold italic mt-1 uppercase"><?= $row['status'] ?></span>
-              <?php endif; ?>
-            </div>
-          </td>
-          <td class="p-4 text-center">
-            <?php if ($row['status'] == 'selesai'): ?>
-              <div class="flex justify-center gap-3">
-                <a href="index.php?page=edit_order&id=<?= $row['id'] ?>" class="text-yellow-600 text-sm font-bold">Edit</a>
-                <a href="index.php?page=orders&hapus=<?= $row['id'] ?>" onclick="return confirm('Hapus pesanan ini?')" class="text-red-500 hover:text-red-700 font-bold text-sm">Hapus</a>
-              </div>
-              <!-- <p>
-                ———
-              </p>
-            <php else : ?>
-              <div class="flex justify-center gap-3">
-                <a href="index.php?page=edit_order&id=<?= $row['id'] ?>" class="text-yellow-600 text-sm font-bold">Edit</a>
-                <a href="index.php?page=orders&hapus=<?= $row['id'] ?>" onclick="return confirm('Hapus pesanan ini?')" class="text-red-500 hover:text-red-700 font-bold text-sm">Hapus</a>
-              </div> -->
-
-            <?php endif; ?>
-          </td>
+<section aria-label="Tabel Pesanan Pelanggan" class="bg-white rounded-2xl border border-stone-200 overflow-hidden">
+  <div class="overflow-x-auto">
+    <table id="tabelPesanan" class="w-full text-left border-collapse">
+      <thead class="bg-[#F3EDE4] border-b border-stone-200">
+        <tr>
+          <th class="p-4 text-xs font-bold uppercase tracking-wider text-slate-700">Pembeli &amp; Status</th>
+          <th class="p-4 text-xs font-bold uppercase tracking-wider text-slate-700">Rincian Hidangan</th>
+          <th class="p-4 text-xs font-bold uppercase tracking-wider text-slate-700">Alamat Pengiriman</th>
+          <th class="p-4 text-xs font-bold uppercase tracking-wider text-slate-700 text-center">Proses Status</th>
+          <th class="p-4 text-xs font-bold uppercase tracking-wider text-slate-700 text-center">Tindakan</th>
         </tr>
-      <?php endwhile; ?>
-    </tbody>
-  </table>
-</div>
+      </thead>
+      <tbody class="divide-y divide-stone-200">
+        <?php while ($row = mysqli_fetch_assoc($all_orders)): ?>
+          <?php
+          $clean_phone = preg_replace('/[^0-9]/', '', $row['whatsapp']);
+          if (substr($clean_phone, 0, 1) === '0') {
+            $clean_phone = '62' . substr($clean_phone, 1);
+          }
+
+          $subtotal_harga = (int)$row['harga'] * (int)$row['stok'];
+          $format_harga = "Rp " . number_format($subtotal_harga, 0, ',', '.');
+
+          $msg_pending = urlencode(
+            "*KONFIRMASI PESANAN - MENUNGGU PROSES*\n"
+              . "------------------------------------------\n"
+              . "Halo *{$row['nama_pembeli']}*,\n\n"
+              . "Terima kasih telah memesan di RasaNusa. Pesanan Anda telah kami terima dan sedang dalam tahap verifikasi:\n\n"
+              . "*Menu:* {$row['nama_produk']}\n"
+              . "*Jumlah:* {$row['stok']} porsi\n"
+              . "*Total:* {$format_harga}\n"
+              . "------------------------------------------\n"
+              . "Kami akan segera mengabarkan status pesanan Anda. Terima kasih!"
+          );
+
+          $msg_setuju = urlencode(
+            "*PESANAN DIKONFIRMASI - SEDANG DISIAPKAN*\n"
+              . "------------------------------------------\n"
+              . "Halo *{$row['nama_pembeli']}*,\n\n"
+              . "Pesanan Anda telah kami setujui dan sedang disiapkan oleh dapur RasaNusa:\n\n"
+              . "*Menu:* {$row['nama_produk']}\n"
+              . "*Jumlah:* {$row['stok']} porsi\n"
+              . "*Total:* {$format_harga}\n"
+              . "------------------------------------------\n"
+              . "Mohon ditunggu ya. Terima kasih!"
+          );
+
+          $msg_tolak = urlencode(
+            "*INFORMASI PESANAN RASANUSA*\n"
+              . "------------------------------------------\n"
+              . "Halo *{$row['nama_pembeli']}*,\n\n"
+              . "Mohon maaf, pesanan Anda untuk menu *{$row['nama_produk']}* saat ini belum dapat kami proses karena keterbatasan stok porsi.\n"
+              . "------------------------------------------\n"
+              . "Silakan melihat pilihan menu lainnya di katalog kami. Terima kasih atas pengertiannya."
+          );
+
+          $msg_selesai = urlencode(
+            "*PESANAN SELESAI*\n"
+              . "------------------------------------------\n"
+              . "Halo *{$row['nama_pembeli']}*,\n\n"
+              . "Pesanan Anda untuk menu *{$row['nama_produk']}* ({$row['stok']} porsi) telah selesai. Selamat menikmati hidangan RasaNusa dan terima kasih telah memesan!"
+          );
+
+          $msg_batal = urlencode(
+            "*PEMBATALAN PESANAN RASANUSA*\n"
+              . "------------------------------------------\n"
+              . "Halo *{$row['nama_pembeli']}*,\n\n"
+              . "Pesanan Anda untuk menu *{$row['nama_produk']}* telah dibatalkan. Jika ada pertanyaan lebih lanjut, silakan balas pesan ini. Terima kasih."
+          );
+
+          $status_badge_class = 'bg-amber-50 text-amber-800 border-amber-200';
+          if ($row['status'] === 'setuju') {
+            $status_badge_class = 'bg-emerald-50 text-emerald-800 border-emerald-200';
+          } elseif ($row['status'] === 'selesai') {
+            $status_badge_class = 'bg-blue-50 text-blue-800 border-blue-200';
+          } elseif ($row['status'] === 'tolak') {
+            $status_badge_class = 'bg-red-50 text-red-800 border-red-200';
+          } elseif ($row['status'] === 'dibatalkan') {
+            $status_badge_class = 'bg-stone-100 text-slate-700 border-stone-300';
+          }
+          ?>
+          <tr class="hover:bg-[#FAF7F2] transition-colors align-top">
+            <td class="p-4 text-sm">
+              <div class="font-bold text-slate-900">
+                <?= htmlspecialchars($row['nama_pembeli'], ENT_QUOTES, 'UTF-8') ?>
+              </div>
+              <div class="text-xs font-semibold text-slate-600 mt-1">
+                WA: <?= htmlspecialchars($row['whatsapp'], ENT_QUOTES, 'UTF-8') ?>
+              </div>
+              <span class="inline-block mt-2 px-2.5 py-0.5 rounded border text-[11px] font-bold uppercase tracking-wider <?= $status_badge_class ?>">
+                Status: <?= htmlspecialchars($row['status'], ENT_QUOTES, 'UTF-8') ?>
+              </span>
+            </td>
+
+            <td class="p-4 text-sm">
+              <div class="font-bold text-slate-900"><?= htmlspecialchars($row['nama_produk'], ENT_QUOTES, 'UTF-8') ?></div>
+              <div class="text-xs font-semibold text-orange-700 mt-1">
+                <?= (int)$row['stok'] ?> Porsi &bull; <?= $format_harga ?>
+              </div>
+              <div class="text-xs text-slate-600 mt-1">
+                Sisa stok dapur: <strong><?= (int)$row['stok_saat_ini'] ?> porsi</strong>
+              </div>
+            </td>
+
+            <td class="p-4 text-sm text-slate-700 max-w-xs leading-relaxed">
+              <?= htmlspecialchars($row['alamat'], ENT_QUOTES, 'UTF-8') ?>
+            </td>
+
+            <td class="p-4 text-center whitespace-nowrap">
+              <div class="flex flex-col gap-2 max-w-[155px] mx-auto">
+                <?php if ($row['status'] === 'pending'): ?>
+                  <button
+                    type="button"
+                    onclick="window.open('https://api.whatsapp.com/send?phone=<?= $clean_phone ?>&text=<?= $msg_pending ?>', '_blank')"
+                    class="min-h-[38px] px-3 py-1.5 rounded-lg bg-[#FAF7F2] hover:bg-stone-200/70 text-slate-800 text-xs font-bold border border-stone-300 transition-colors"
+                  >
+                    Hubungi WA
+                  </button>
+                  <button
+                    type="button"
+                    onclick="ubahStatus('setuju', <?= (int)$row['id'] ?>, <?= (int)$row['stok'] ?>, <?= (int)$row['stok_saat_ini'] ?>, <?= htmlspecialchars(json_encode($row['nama_produk']), ENT_QUOTES, 'UTF-8') ?>)"
+                    class="min-h-[38px] px-3 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold transition-colors"
+                  >
+                    Setujui Pesanan
+                  </button>
+                  <button
+                    type="button"
+                    onclick="ubahStatus('tolak', <?= (int)$row['id'] ?>)"
+                    class="min-h-[38px] px-3 py-1.5 rounded-lg bg-white hover:bg-red-50 text-red-700 border border-red-300 text-xs font-bold transition-colors"
+                  >
+                    Tolak
+                  </button>
+
+                <?php elseif ($row['status'] === 'setuju'): ?>
+                  <button
+                    type="button"
+                    onclick="window.open('https://api.whatsapp.com/send?phone=<?= $clean_phone ?>&text=<?= $msg_setuju ?>', '_blank')"
+                    class="min-h-[38px] px-3 py-1.5 rounded-lg bg-[#FAF7F2] hover:bg-stone-200/70 text-slate-800 text-xs font-bold border border-stone-300 transition-colors"
+                  >
+                    Hubungi WA
+                  </button>
+                  <button
+                    type="button"
+                    onclick="confirmSelesai(<?= (int)$row['id'] ?>)"
+                    class="min-h-[38px] px-3 py-1.5 rounded-lg bg-orange-700 hover:bg-orange-800 text-white text-xs font-bold transition-colors"
+                  >
+                    Tandai Selesai
+                  </button>
+                  <button
+                    type="button"
+                    onclick="confirmBatal(<?= (int)$row['id'] ?>)"
+                    class="min-h-[38px] px-3 py-1.5 rounded-lg bg-white hover:bg-red-50 text-red-700 border border-red-300 text-xs font-bold transition-colors"
+                  >
+                    Batalkan
+                  </button>
+
+                <?php elseif ($row['status'] === 'selesai'): ?>
+                  <button
+                    type="button"
+                    onclick="window.open('https://api.whatsapp.com/send?phone=<?= $clean_phone ?>&text=<?= $msg_selesai ?>', '_blank')"
+                    class="min-h-[38px] px-3 py-1.5 rounded-lg bg-[#FAF7F2] hover:bg-stone-200/70 text-slate-800 text-xs font-bold border border-stone-300 transition-colors"
+                  >
+                    Hubungi WA
+                  </button>
+
+                <?php else: ?>
+                  <button
+                    type="button"
+                    onclick="window.open('https://api.whatsapp.com/send?phone=<?= $clean_phone ?>&text=<?= $row['status'] === 'tolak' ? $msg_tolak : $msg_batal ?>', '_blank')"
+                    class="min-h-[38px] px-3 py-1.5 rounded-lg bg-[#FAF7F2] hover:bg-stone-200/70 text-slate-800 text-xs font-bold border border-stone-300 transition-colors"
+                  >
+                    Hubungi WA
+                  </button>
+                <?php endif; ?>
+              </div>
+            </td>
+
+            <td class="p-4 text-center whitespace-nowrap">
+              <div class="inline-flex items-center gap-2">
+                <a
+                  href="index.php?page=edit_order&id=<?= (int)$row['id'] ?>"
+                  class="min-h-[38px] inline-flex items-center px-3 py-1.5 rounded-lg border border-stone-300 bg-white hover:bg-stone-100 text-slate-800 text-xs font-bold transition-colors"
+                >
+                  Edit
+                </a>
+                <a
+                  href="index.php?page=orders&hapus=<?= (int)$row['id'] ?>"
+                  onclick="return confirm('Hapus riwayat pesanan ini?')"
+                  class="min-h-[38px] inline-flex items-center px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-800 text-xs font-bold transition-colors"
+                >
+                  Hapus
+                </a>
+              </div>
+            </td>
+          </tr>
+        <?php endwhile; ?>
+      </tbody>
+    </table>
+  </div>
+</section>

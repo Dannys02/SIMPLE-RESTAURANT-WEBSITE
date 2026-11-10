@@ -1,209 +1,247 @@
 <?php
-/**
- * ============================================
- * HALAMAN MANAJEMEN TESTIMONI PELANGGAN
- * ============================================
- * CRUD Operations:
- * CREATE: Form tambah testimoni baru
- * READ:   Tampilkan daftar testimoni
- * UPDATE: Edit testimoni (di halaman terpisah: edit_testimoni.php)
- * DELETE: Hapus testimoni
- * DISPLAY: Pilih max 3 testimoni untuk ditampilkan di halaman utama
- */
-
 if (!defined('AKSES_AMAN')) {
     require_once __DIR__ . '/../config/db.php';
     abort_error(403, 'Akses Langsung Ditolak', 'File komponen admin tidak dapat diakses secara langsung.', base_url('admin/index.php'), 'Ke Dashboard Admin');
 }
 
-// ========== PROSES SIMPAN TESTIMONI BARU ==========
+// Proses simpan testimoni baru
 if (isset($_POST['simpan'])) {
-    // Sanitasi input text
-    $nama = htmlspecialchars($_POST['nama_pelanggan']);
-    $kerja = htmlspecialchars($_POST['pekerjaan']);
-    $isi = htmlspecialchars($_POST['isi']);
-    $bintang = (int)$_POST['bintang'];
+    $nama = trim($_POST['nama_pelanggan'] ?? '');
+    $kerja = trim($_POST['pekerjaan'] ?? '');
+    $isi = trim($_POST['isi'] ?? '');
+    $bintang = max(1, min(5, (int)($_POST['bintang'] ?? 5)));
 
-    // Gunakan Prepared Statement untuk keamanan
     $stmt = $koneksi->prepare("INSERT INTO testimoni (nama_pelanggan, pekerjaan, isi, bintang) VALUES (?, ?, ?, ?)");
     $stmt->bind_param("sssi", $nama, $kerja, $isi, $bintang);
     $stmt->execute();
 
-    // Redirect kembali ke halaman testimoni
     echo "<script>window.location.href='index.php?page=testimoni';</script>";
     exit;
 }
 
-// ========== PROSES HAPUS TESTIMONI ==========
+// Proses hapus testimoni
 if (isset($_GET['hapus'])) {
     $id = (int)$_GET['hapus'];
 
-    // Gunakan Prepared Statement
     $stmt = $koneksi->prepare("DELETE FROM testimoni WHERE id = ?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
 
-    // Redirect kembali ke halaman testimoni
     echo "<script>window.location.href='index.php?page=testimoni';</script>";
     exit;
 }
 
-// ========== PROSES UPDATE PILIHAN TESTIMONI TAMPIL ==========
+// Proses update pilihan testimoni tampil (maksimal 3)
 if (isset($_POST['simpan_testi'])) {
-    // Reset semua testimonial (set tampil = 0)
     mysqli_query($koneksi, "UPDATE testimoni SET tampil = 0");
 
-    // Aktifkan (tampil = 1) untuk which yang dicentang
-    if (!empty($_POST['pilihan'])) {
+    if (!empty($_POST['pilihan']) && is_array($_POST['pilihan'])) {
+        $count = 0;
         foreach ($_POST['pilihan'] as $id) {
+            if ($count >= 3) break;
             $id = (int)$id;
             mysqli_query($koneksi, "UPDATE testimoni SET tampil = 1 WHERE id = $id");
+            $count++;
         }
     }
 
-    // Redirect kembali ke halaman testimoni
     echo "<script>window.location.href='index.php?page=testimoni';</script>";
     exit;
 }
 
-// Ambil semua testimoni dari database
 $res = mysqli_query($koneksi, "SELECT * FROM testimoni ORDER BY id DESC");
 ?>
 
-<div class="max-w-6xl mx-auto">
-    <h2 class="text-2xl font-bold mb-6 text-slate-800">Manajemen Testimoni</h2>
+<!-- Header Halaman -->
+<header class="border-b border-stone-200 pb-6 mb-8">
+  <h1 class="font-serif-editorial text-2xl sm:text-3xl font-bold text-slate-900">Manajemen Ulasan Pelanggan</h1>
+  <p class="text-sm text-slate-600 mt-1">
+    Catat ulasan pelanggan nyata dan pilih maksimal 3 ulasan terbaik untuk ditampilkan di halaman utama RasaNusa.
+  </p>
+</header>
 
-    <!-- FORM TAMBAH TESTIMONI BARU -->
-    <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-200 mb-10">
-        <form action="" method="POST" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Kolom Kiri: Input Nama & Pekerjaan & Bintang -->
-            <div class="space-y-4">
-                <!-- Input Nama Pelanggan -->
-                <input type="text" name="nama_pelanggan" placeholder="Nama Pelanggan" 
-                    class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 transition" 
-                    required>
+<div id="checkboxAlert" role="alert" class="hidden mb-6 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-sm font-semibold">
+  Maksimal hanya 3 ulasan pelanggan yang dapat ditampilkan sekaligus di beranda.
+</div>
 
-                <!-- Input Pekerjaan -->
-                <input type="text" name="pekerjaan" placeholder="Pekerjaan" 
-                    class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 transition" 
-                    required>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-                <!-- Input Rating (Bintang) -->
-                <select name="bintang" 
-                    class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 transition">
-                    <option value="5">⭐⭐⭐⭐⭐</option>
-                    <option value="4">⭐⭐⭐⭐</option>
-                    <option value="3">⭐⭐⭐</option>
-                    <option value="2">⭐⭐</option>
-                    <option value="1">⭐</option>
-                </select>
-            </div>
+  <!-- Kolom Kiri (4 Kolom): Form Tambah Testimoni -->
+  <section aria-labelledby="tambah-ulasan-heading" class="lg:col-span-4 bg-white p-6 sm:p-7 rounded-2xl border border-stone-200">
+    <h2 id="tambah-ulasan-heading" class="text-lg font-bold text-slate-900 mb-1">Tambah Ulasan Baru</h2>
+    <p class="text-xs text-slate-600 mb-6">Masukkan kesan dan penilaian nyata dari pelanggan.</p>
 
-            <!-- Kolom Kanan: Input Testimoni & Tombol -->
-            <div class="space-y-4">
-                <!-- Textarea Isi Testimoni -->
-                <textarea name="isi" placeholder="Isi Testimoni" rows="4" 
-                    class="w-full border p-3 rounded-xl outline-none focus:ring-2 focus:ring-orange-500 transition" 
-                    required></textarea>
+    <form action="" method="POST" class="space-y-4">
+      <div>
+        <label for="nama_pelanggan" class="block text-sm font-bold text-slate-800 mb-1.5">Nama Pelanggan</label>
+        <input
+          type="text"
+          id="nama_pelanggan"
+          name="nama_pelanggan"
+          placeholder="Nama pelanggan"
+          class="w-full min-h-[44px] bg-[#FAF7F2] border border-stone-300 px-3.5 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:bg-white transition"
+          required
+        >
+      </div>
 
-                <!-- Tombol Simpan -->
-                <button type="submit" name="simpan" 
-                    class="w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 rounded-xl transition shadow-lg shadow-orange-100">
-                    Simpan Testimoni
-                </button>
-            </div>
-        </form>
-    </div>
+      <div>
+        <label for="pekerjaan_pelanggan" class="block text-sm font-bold text-slate-800 mb-1.5">Profesi / Keterangan</label>
+        <input
+          type="text"
+          id="pekerjaan_pelanggan"
+          name="pekerjaan"
+          placeholder="Pelanggan Tetap / Karyawan / Mahasiswa"
+          class="w-full min-h-[44px] bg-[#FAF7F2] border border-stone-300 px-3.5 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:bg-white transition"
+          required
+        >
+      </div>
 
-    <!-- TABEL DAFTAR TESTIMONI -->
-    <div class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden overflow-x-auto">
-        <form action="" method="POST">
-            <table id="tabelPesanan" class="w-full text-left border-collapse">
-                <thead class="bg-gray-50 border-b">
-                    <tr>
-                        <th class="p-4 font-bold text-slate-700">Pelanggan</th>
-                        <th class="p-4 font-bold text-slate-700">Testimoni</th>
-                        <th class="p-4 font-bold text-slate-700">Rating</th>
-                        <th class="p-4 font-bold text-slate-700">Aksi</th>
-                        <th class="p-4 font-bold text-slate-700">Tampilkan</th>
-                    </tr>
-                </thead>
-                <tbody class="divide-y">
-                    <?php while ($row = mysqli_fetch_assoc($res)): ?>
-                        <tr class="hover:bg-gray-50">
-                            <!-- Kolom Pelanggan (Nama & Pekerjaan) -->
-                            <td class="p-4 text-sm">
-                                <div class="font-bold">
-                                    <?= htmlspecialchars($row['nama_pelanggan']) ?>
-                                </div>
-                                <div class="text-gray-500 text-xs">
-                                    <?= htmlspecialchars($row['pekerjaan']) ?>
-                                </div>
-                            </td>
+      <div>
+        <label for="bintang_ulasan" class="block text-sm font-bold text-slate-800 mb-1.5">Penilaian (1 - 5 Bintang)</label>
+        <select
+          id="bintang_ulasan"
+          name="bintang"
+          class="w-full min-h-[44px] bg-[#FAF7F2] border border-stone-300 px-3.5 py-2.5 rounded-lg text-sm text-slate-900 focus:bg-white transition"
+        >
+          <option value="5">5 Bintang (Sangat Memuaskan)</option>
+          <option value="4">4 Bintang (Memuaskan)</option>
+          <option value="3">3 Bintang (Cukup Baik)</option>
+          <option value="2">2 Bintang (Kurang)</option>
+          <option value="1">1 Bintang (Perlu Perbaikan)</option>
+        </select>
+      </div>
 
-                            <!-- Kolom Isi Testimoni -->
-                            <td class="p-4 text-sm text-gray-600 italic">"<?= htmlspecialchars($row['isi']) ?>"</td>
+      <div>
+        <label for="isi_ulasan" class="block text-sm font-bold text-slate-800 mb-1.5">Isi Ulasan</label>
+        <textarea
+          id="isi_ulasan"
+          name="isi"
+          rows="4"
+          placeholder="Tuliskan kutipan ulasan pelanggan..."
+          class="w-full bg-[#FAF7F2] border border-stone-300 px-3.5 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:bg-white transition"
+          required
+        ></textarea>
+      </div>
 
-                            <!-- Kolom Rating (Bintang) -->
-                            <td class="p-4 text-orange-500">
-                                <?= str_repeat('⭐', $row['bintang']) ?>
-                            </td>
+      <div class="pt-2">
+        <button
+          type="submit"
+          name="simpan"
+          class="w-full min-h-[48px] bg-orange-700 hover:bg-orange-800 active:translate-y-px text-white font-bold text-sm py-3 px-6 rounded-lg transition-all"
+        >
+          Simpan Ulasan
+        </button>
+      </div>
+    </form>
+  </section>
 
-                            <!-- Kolom Aksi (Edit & Hapus) -->
-                            <td class="p-4 text-center">
-                                <div class="flex justify-center gap-3">
-                                    <!-- Tombol Edit -->
-                                    <a href="index.php?page=testimoni_edit&id=<?= $row['id'] ?>" 
-                                        class="text-yellow-600 text-sm font-bold">
-                                        Edit
-                                    </a>
+  <!-- Kolom Kanan (8 Kolom): Tabel Daftar Testimoni -->
+  <section aria-labelledby="daftar-ulasan-heading" class="lg:col-span-8 bg-white rounded-2xl border border-stone-200 overflow-hidden">
+    <form action="" method="POST">
+      <div class="p-6 border-b border-stone-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 id="daftar-ulasan-heading" class="text-lg font-bold text-slate-900">Daftar Ulasan Tersimpan</h2>
+          <p class="text-xs text-slate-600">Centang kolom <strong>Tampil</strong> (maks. 3), lalu klik tombol Simpan Pilihan Tampil.</p>
+        </div>
+        <button
+          type="submit"
+          name="simpan_testi"
+          class="min-h-[44px] bg-slate-900 hover:bg-slate-800 text-white font-bold py-2.5 px-5 rounded-lg text-xs transition shrink-0"
+        >
+          Simpan Pilihan Tampil
+        </button>
+      </div>
 
-                                    <!-- Tombol Hapus -->
-                                    <a href="index.php?page=testimoni&hapus=<?= $row['id'] ?>" 
-                                        onclick="return confirm('Hapus testimoni ini?')" 
-                                        class="text-red-500 hover:text-red-700 font-bold text-sm">
-                                        Hapus
-                                    </a>
-                                </div>
-                            </td>
+      <div class="overflow-x-auto">
+        <table id="tabelPesanan" class="w-full text-left border-collapse">
+          <thead class="bg-[#F3EDE4] border-b border-stone-200">
+            <tr>
+              <th class="p-4 text-xs font-bold uppercase tracking-wider text-slate-700">Pelanggan</th>
+              <th class="p-4 text-xs font-bold uppercase tracking-wider text-slate-700">Kutipan Ulasan</th>
+              <th class="p-4 text-xs font-bold uppercase tracking-wider text-slate-700">Rating</th>
+              <th class="p-4 text-xs font-bold uppercase tracking-wider text-slate-700 text-center">Tampil</th>
+              <th class="p-4 text-xs font-bold uppercase tracking-wider text-slate-700 text-center">Tindakan</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-stone-200">
+            <?php while ($row = mysqli_fetch_assoc($res)):
+              $id_t = (int)$row['id'];
+            ?>
+              <tr class="hover:bg-[#FAF7F2] transition-colors">
+                <td class="p-4 text-sm whitespace-nowrap">
+                  <div class="font-bold text-slate-900">
+                    <?= htmlspecialchars($row['nama_pelanggan'], ENT_QUOTES, 'UTF-8') ?>
+                  </div>
+                  <div class="text-slate-600 text-xs mt-0.5">
+                    <?= htmlspecialchars($row['pekerjaan'], ENT_QUOTES, 'UTF-8') ?>
+                  </div>
+                </td>
 
-                            <!-- Kolom Checkbox Tampilkan (Max 3) -->
-                            <td class="p-4 text-center">
-                                <input type="checkbox" 
-                                    class="testi-checkbox w-5 h-5 accent-orange-500" 
-                                    name="pilihan[]" 
-                                    value="<?= $row['id'] ?>" 
-                                    <?= $row['tampil'] == 1 ? 'checked' : '' ?> 
-                                    onchange="limitCheckbox(this)" />
-                            </td>
-                        </tr>
-                    <?php endwhile; ?>
-                </tbody>
-            </table>
+                <td class="p-4 text-sm text-slate-700 leading-relaxed max-w-xs">
+                  "<?= htmlspecialchars($row['isi'], ENT_QUOTES, 'UTF-8') ?>"
+                </td>
 
-            <!-- Tombol Konfirmasi Tampilkan -->
-            <div class="p-4 flex justify-center md:justify-end">
-                <button type="submit" name="simpan_testi" 
-                    class="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-6 rounded-xl transition shadow-lg">
-                    Konfirmasi Tampilkan
-                </button>
-            </div>
-        </form>
-    </div>
+                <td class="p-4 whitespace-nowrap">
+                  <span class="inline-block px-2.5 py-1 rounded bg-orange-50 border border-orange-200 text-orange-800 text-xs font-bold">
+                    <?= (int)$row['bintang'] ?> / 5
+                  </span>
+                </td>
+
+                <td class="p-4 text-center">
+                  <label for="tampil_<?= $id_t ?>" class="inline-flex items-center justify-center min-h-[38px] min-w-[38px] cursor-pointer">
+                    <span class="sr-only">Tampilkan ulasan <?= htmlspecialchars($row['nama_pelanggan'], ENT_QUOTES, 'UTF-8') ?> di beranda</span>
+                    <input
+                      type="checkbox"
+                      id="tampil_<?= $id_t ?>"
+                      class="testi-checkbox w-5 h-5 accent-orange-700 rounded cursor-pointer"
+                      name="pilihan[]"
+                      value="<?= $id_t ?>"
+                      <?= ((int)$row['tampil'] === 1) ? 'checked' : '' ?>
+                      onchange="limitCheckbox(this)"
+                    />
+                  </label>
+                </td>
+
+                <td class="p-4 text-center whitespace-nowrap">
+                  <div class="inline-flex items-center gap-2">
+                    <a
+                      href="index.php?page=testimoni_edit&id=<?= $id_t ?>"
+                      class="min-h-[38px] inline-flex items-center px-3 py-1.5 rounded-lg border border-stone-300 bg-white hover:bg-stone-100 text-slate-800 text-xs font-bold transition-colors"
+                    >
+                      Edit
+                    </a>
+                    <a
+                      href="index.php?page=testimoni&hapus=<?= $id_t ?>"
+                      onclick="return confirm('Hapus ulasan pelanggan ini?')"
+                      class="min-h-[38px] inline-flex items-center px-3 py-1.5 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 text-red-800 text-xs font-bold transition-colors"
+                    >
+                      Hapus
+                    </a>
+                  </div>
+                </td>
+              </tr>
+            <?php endwhile; ?>
+          </tbody>
+        </table>
+      </div>
+    </form>
+  </section>
+
 </div>
 
 <script>
-    /**
-     * Fungsi untuk membatasi jumlah checkbox yang bisa dicentang (Max 3)
-     * Mencegah lebih dari 3 testimoni ditampilkan di halaman utama
-     */
-    function limitCheckbox(el) {
-        // Cari semua checkbox yang sedang dicentang
-        let checkboxes = document.querySelectorAll('.testi-checkbox:checked');
+  function limitCheckbox(el) {
+    let checkboxes = document.querySelectorAll('.testi-checkbox:checked');
+    const alertBox = document.getElementById('checkboxAlert');
 
-        if (checkboxes.length > 3) {
-            alert("Maksimal hanya 3 testimoni yang boleh ditampilkan!");
-            el.checked = false; // Batalkan centangan yang ke-4
-        }
+    if (checkboxes.length > 3) {
+      el.checked = false;
+      if (alertBox) {
+        alertBox.classList.remove('hidden');
+        setTimeout(() => alertBox.classList.add('hidden'), 4000);
+      }
+    } else if (alertBox) {
+      alertBox.classList.add('hidden');
     }
+  }
 </script>

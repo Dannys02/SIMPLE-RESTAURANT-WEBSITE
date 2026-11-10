@@ -1,223 +1,222 @@
 <?php
-/**
- * ============================================
- * HALAMAN PENGATURAN AKUN ADMIN
- * ============================================
- * Fungsi:
- * - Update username admin
- * - Update nomor WhatsApp admin (untuk chat pelanggan)
- * - Update password admin
- */
-
 if (!defined('AKSES_AMAN')) {
     require_once __DIR__ . '/../config/db.php';
     abort_error(403, 'Akses Langsung Ditolak', 'File komponen admin tidak dapat diakses secara langsung.', base_url('admin/index.php'), 'Ke Dashboard Admin');
 }
 
-// ========== INISIALISASI VARIABEL ==========
-$admin_id = $_SESSION['admin_id'];
+$admin_id = (int)($_SESSION['admin_id'] ?? 0);
 $pesan_sukses = "";
 $pesan_error = "";
 
-// ========== AMBIL DATA AWAL DARI DATABASE ==========
-
-// Query 1: Ambil data username & password admin
 $sql_admin = "SELECT username, password FROM admins WHERE id = '$admin_id'";
 $query_admin = mysqli_query($koneksi, $sql_admin);
-$data_admin = mysqli_fetch_assoc($query_admin);
+$data_admin = $query_admin ? mysqli_fetch_assoc($query_admin) : ['username' => $_SESSION['username'] ?? 'admin', 'password' => ''];
 
-// Query 2: Ambil data nomor WhatsApp admin
 $sql_wa = "SELECT nomor FROM admins_wa WHERE id = 1";
 $query_wa = mysqli_query($koneksi, $sql_wa);
-$data_wa = mysqli_fetch_assoc($query_wa);
-$wa_sekarang = $data_wa['nomor'] ?? '628...';
+$data_wa = $query_wa ? mysqli_fetch_assoc($query_wa) : null;
+$wa_sekarang = $data_wa['nomor'] ?? '6285645837298';
 
-// ========== PROSES FORM UPDATE ==========
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
-    // ===== PROSES 1: UPDATE USERNAME =====
     if (isset($_POST['update_profile'])) {
-        // Sanitasi input username
-        $user_input = mysqli_real_escape_string($koneksi, $_POST['username']);
+        $user_input = mysqli_real_escape_string($koneksi, trim($_POST['username'] ?? ''));
 
-        $sql_update_user = "UPDATE admins SET username = '$user_input' WHERE id = '$admin_id'";
-        if (mysqli_query($koneksi, $sql_update_user)) {
-            $pesan_sukses = "Username berhasil diperbarui!";
-            $data_admin['username'] = $user_input;          // Sinkronisasi tampilan HTML
-            $_SESSION['username'] = $user_input;             // Update session
+        if ($user_input !== '') {
+            $sql_update_user = "UPDATE admins SET username = '$user_input' WHERE id = '$admin_id'";
+            if (mysqli_query($koneksi, $sql_update_user)) {
+                $pesan_sukses = "Username pengelola berhasil diperbarui.";
+                $data_admin['username'] = $user_input;
+                $_SESSION['username'] = $user_input;
+            } else {
+                $pesan_error = "Gagal memperbarui username pengelola.";
+            }
         } else {
-            $pesan_error = "Gagal memperbarui username.";
+            $pesan_error = "Username tidak boleh kosong.";
         }
     }
 
-    // ===== PROSES 2: UPDATE NOMOR WhatsApp =====
     if (isset($_POST['update_wa'])) {
-        // Sanitasi nomor WA
-        $wa_input = mysqli_real_escape_string($koneksi, $_POST['nomor_wa']);
+        $wa_input = mysqli_real_escape_string($koneksi, preg_replace('/[^0-9]/', '', $_POST['nomor_wa'] ?? ''));
 
-        $sql_update_wa = "UPDATE admins_wa SET nomor = '$wa_input' WHERE id = 1";
-        if (mysqli_query($koneksi, $sql_update_wa)) {
-            $pesan_sukses = "Nomor WhatsApp berhasil diperbarui!";
-            $wa_sekarang = $wa_input;  // Sinkronisasi tampilan
+        if (strlen($wa_input) >= 10) {
+            $sql_update_wa = "UPDATE admins_wa SET nomor = '$wa_input' WHERE id = 1";
+            if (mysqli_query($koneksi, $sql_update_wa)) {
+                $pesan_sukses = "Nomor WhatsApp layanan pelanggan berhasil diperbarui.";
+                $wa_sekarang = $wa_input;
+            } else {
+                $pesan_error = "Gagal memperbarui nomor WhatsApp.";
+            }
         } else {
-            $pesan_error = "Gagal memperbarui nomor WhatsApp.";
+            $pesan_error = "Nomor WhatsApp harus terdiri dari minimal 10 digit angka.";
         }
     }
 
-    // ===== PROSES 3: UPDATE PASSWORD =====
     if (isset($_POST['update_password'])) {
-        $pw_lama = $_POST['password_lama'];
-        $pw_baru = $_POST['password_baru'];
-        $pw_konfirmasi = $_POST['konfirmasi_password'];
+        $pw_lama = $_POST['password_lama'] ?? '';
+        $pw_baru = $_POST['password_baru'] ?? '';
+        $pw_konfirmasi = $_POST['konfirmasi_password'] ?? '';
 
-        // Validasi 1: Cek password lama dengan verifikasi hash
         if (password_verify($pw_lama, $data_admin['password'])) {
-            // Validasi 2: Cek kecocokan password baru dengan konfirmasi
             if ($pw_baru === $pw_konfirmasi) {
-                // Validasi 3: Cek minimal karakter
                 if (strlen($pw_baru) < 5) {
-                    $pesan_error = "Password baru minimal 5 karakter!";
+                    $pesan_error = "Kata sandi baru minimal harus terdiri dari 5 karakter.";
                 } else {
-                    // Hash password baru menggunakan PASSWORD_DEFAULT (bcrypt)
                     $pw_hash = password_hash($pw_baru, PASSWORD_DEFAULT);
                     $sql_update_pw = "UPDATE admins SET password = '$pw_hash' WHERE id = '$admin_id'";
 
                     if (mysqli_query($koneksi, $sql_update_pw)) {
-                        $pesan_sukses = "Password berhasil diperbarui!";
+                        $pesan_sukses = "Kata sandi akun berhasil diperbarui.";
+                        $data_admin['password'] = $pw_hash;
+                    } else {
+                        $pesan_error = "Gagal menyimpan kata sandi baru.";
                     }
                 }
             } else {
-                $pesan_error = "Konfirmasi password baru tidak cocok.";
+                $pesan_error = "Konfirmasi kata sandi baru tidak cocok.";
             }
         } else {
-            $pesan_error = "Password lama salah.";
+            $pesan_error = "Kata sandi lama yang Anda masukkan salah.";
         }
     }
 }
 ?>
 
-<div class="mb-8">
-    <h1 class="text-2xl font-bold text-slate-800">Pengaturan Akun</h1>
-    <p class="text-slate-500">
-        Kelola informasi login dan keamanan panel admin Anda.
-    </p>
+<!-- Header Halaman Pengaturan -->
+<header class="border-b border-stone-200 pb-6 mb-8">
+  <h1 class="font-serif-editorial text-2xl sm:text-3xl font-bold text-slate-900">Pengaturan Akun &amp; Kontak</h1>
+  <p class="text-sm text-slate-600 mt-1">
+    Kelola identitas masuk pengelola, nomor tujuan WhatsApp pelanggan, serta keamanan kata sandi.
+  </p>
+</header>
+
+<?php if ($pesan_error !== ''): ?>
+<div role="alert" class="mb-6 p-4 bg-red-50 border border-red-200 text-red-800 text-sm font-semibold rounded-xl">
+  <?= htmlspecialchars($pesan_error, ENT_QUOTES, 'UTF-8') ?>
 </div>
-
-<!-- Pesan Error (Jika Ada) -->
-<?php if ($pesan_error): ?>
-    <div class="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700 text-sm font-bold rounded shadow-sm">
-        ⚠️ <?= $pesan_error ?>
-    </div>
 <?php endif; ?>
 
-<!-- Pesan Sukses (Jika Ada) -->
-<?php if ($pesan_sukses): ?>
-    <div class="mb-6 p-4 bg-emerald-50 border-l-4 border-emerald-500 text-emerald-700 text-sm font-bold rounded shadow-sm">
-        ✅ <?= $pesan_sukses ?>
-    </div>
+<?php if ($pesan_sukses !== ''): ?>
+<div role="status" class="mb-6 p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm font-semibold rounded-xl">
+  <?= htmlspecialchars($pesan_sukses, ENT_QUOTES, 'UTF-8') ?>
+</div>
 <?php endif; ?>
 
-<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-    <!-- SECTION 1: PROFIL ADMIN -->
-    <div class="md:col-span-1">
-        <h3 class="text-lg font-bold text-slate-700 mb-2">Profil Admin</h3>
-        <p class="text-sm text-slate-500">
-            Username digunakan untuk masuk ke dashboard ini.
-        </p>
-    </div>
+  <!-- Kolom Kiri (6 Kolom): Profil Admin & Nomor WhatsApp -->
+  <section aria-labelledby="profil-kontak-heading" class="lg:col-span-6 bg-white p-6 sm:p-8 rounded-2xl border border-stone-200 space-y-8">
+    <div>
+      <h2 id="profil-kontak-heading" class="text-lg font-bold text-slate-900 mb-1">Profil &amp; Kontak WhatsApp</h2>
+      <p class="text-xs text-slate-600 mb-6">Informasi ini digunakan untuk masuk ke panel admin dan menerima pesan pesanan dari pelanggan.</p>
 
-    <!-- FORM: Update Username & Nomor WA -->
-    <div class="md:col-span-2">
-        <div class="bg-white p-6 rounded-2xl border border-orange-200 shadow-sm space-y-6">
-
-            <!-- Form Update Username -->
-            <form method="POST" class="pb-6 border-b border-orange-50">
-                <div class="mb-4">
-                    <label class="block text-sm font-bold text-slate-600 mb-2">Username Admin</label>
-                    <input type="text" name="username" 
-                        value="<?= htmlspecialchars($data_admin['username']) ?>"
-                        class="w-full border border-orange-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition" 
-                        required>
-                </div>
-                <button type="submit" name="update_profile" 
-                    class="bg-orange-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-orange-700 transition">
-                    Simpan Username
-                </button>
-            </form>
-
-            <!-- Form Update Nomor WhatsApp -->
-            <form method="POST">
-                <div class="mb-4">
-                    <label class="block text-sm font-bold text-slate-600 mb-2">
-                        Nomor WhatsApp Admin (Gunakan 62)
-                    </label>
-                    <input type="text" name="nomor_wa" 
-                        value="<?= htmlspecialchars($wa_sekarang) ?>"
-                        placeholder="Contoh: 62812345678"
-                        class="w-full border border-orange-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition" 
-                        required>
-                    <p class="text-[10px] text-slate-400 mt-1">
-                        *Nomor ini digunakan sebagai tujuan chat pelanggan di halaman depan.
-                    </p>
-                </div>
-                <button type="submit" name="update_wa" 
-                    class="bg-orange-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-orange-700 transition">
-                    Perbarui Nomor WA
-                </button>
-            </form>
-
+      <!-- Form Update Username -->
+      <form method="POST" class="pb-6 border-b border-stone-200 space-y-4">
+        <div>
+          <label for="username_admin" class="block text-sm font-bold text-slate-800 mb-1.5">Username Pengelola</label>
+          <input
+            type="text"
+            id="username_admin"
+            name="username"
+            value="<?= htmlspecialchars($data_admin['username'], ENT_QUOTES, 'UTF-8') ?>"
+            class="w-full min-h-[44px] bg-[#FAF7F2] border border-stone-300 px-3.5 py-2.5 rounded-lg text-sm text-slate-900 focus:bg-white transition"
+            required
+          >
         </div>
+        <button
+          type="submit"
+          name="update_profile"
+          class="min-h-[44px] bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-lg font-bold text-xs transition"
+        >
+          Simpan Username
+        </button>
+      </form>
     </div>
 
-    <!-- Pembatas Horizontal -->
-    <div class="md:col-span-3 border-t border-orange-100 my-4"></div>
-
-    <!-- SECTION 2: KEAMANAN PASSWORD -->
-    <div class="md:col-span-1">
-        <h3 class="text-lg font-bold text-slate-700 mb-2">Keamanan</h3>
-        <p class="text-sm text-slate-500">
-            Ganti password secara berkala untuk menjaga keamanan data UMKM.
+    <!-- Form Update Nomor WhatsApp -->
+    <form method="POST" class="space-y-4">
+      <div>
+        <label for="nomor_wa_admin" class="block text-sm font-bold text-slate-800 mb-1.5">
+          Nomor WhatsApp Penerima Pesanan (Awali dengan 62)
+        </label>
+        <input
+          type="tel"
+          id="nomor_wa_admin"
+          name="nomor_wa"
+          value="<?= htmlspecialchars($wa_sekarang, ENT_QUOTES, 'UTF-8') ?>"
+          placeholder="628123456789"
+          class="w-full min-h-[44px] bg-[#FAF7F2] border border-stone-300 px-3.5 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:bg-white transition"
+          required
+        >
+        <p class="text-xs text-slate-600 mt-1.5">
+          Seluruh tombol pesan dan formulir kontak di halaman pelanggan akan diarahkan ke nomor ini.
         </p>
-    </div>
+      </div>
+      <button
+        type="submit"
+        name="update_wa"
+        class="min-h-[44px] bg-orange-700 hover:bg-orange-800 text-white px-5 py-2.5 rounded-lg font-bold text-xs transition"
+      >
+        Perbarui Nomor WhatsApp
+      </button>
+    </form>
+  </section>
 
-    <!-- FORM: Update Password -->
-    <div class="md:col-span-2">
-        <div class="bg-white p-6 rounded-2xl border border-orange-200 shadow-sm">
-            <form method="POST" class="space-y-4">
-                <!-- Input Password Lama -->
-                <div>
-                    <label class="block text-sm font-bold text-slate-600 mb-2">Password Lama</label>
-                    <input type="password" name="password_lama" placeholder="••••••••"
-                        class="w-full border border-orange-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition" 
-                        required>
-                </div>
+  <!-- Kolom Kanan (6 Kolom): Keamanan Kata Sandi -->
+  <section aria-labelledby="keamanan-sandi-heading" class="lg:col-span-6 bg-white p-6 sm:p-8 rounded-2xl border border-stone-200">
+    <h2 id="keamanan-sandi-heading" class="text-lg font-bold text-slate-900 mb-1">Ubah Kata Sandi</h2>
+    <p class="text-xs text-slate-600 mb-6">Perbarui kata sandi secara berkala untuk menjaga keamanan data operasional RasaNusa.</p>
 
-                <!-- Input Password Baru & Konfirmasi -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block text-sm font-bold text-slate-600 mb-2">Password Baru</label>
-                        <input type="password" name="password_baru" placeholder="Minimal 5 karakter"
-                            class="w-full border border-orange-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition" 
-                            required>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-bold text-slate-600 mb-2">Konfirmasi Password</label>
-                        <input type="password" name="konfirmasi_password" placeholder="Ulangi password baru"
-                            class="w-full border border-orange-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition" 
-                            required>
-                    </div>
-                </div>
+    <form method="POST" class="space-y-4">
+      <div>
+        <label for="password_lama" class="block text-sm font-bold text-slate-800 mb-1.5">Kata Sandi Saat Ini</label>
+        <input
+          type="password"
+          id="password_lama"
+          name="password_lama"
+          placeholder="Masukkan kata sandi lama"
+          autocomplete="current-password"
+          class="w-full min-h-[44px] bg-[#FAF7F2] border border-stone-300 px-3.5 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:bg-white transition"
+          required
+        >
+      </div>
 
-                <!-- Tombol Simpan -->
-                <div class="pt-2">
-                    <button type="submit" name="update_password" 
-                        class="w-full bg-orange-500 text-white py-3 rounded-xl font-bold shadow-lg shadow-orange-100 hover:bg-orange-600 active:scale-95 transition-all text-sm">
-                        Perbarui Kata Sandi
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+      <div>
+        <label for="password_baru" class="block text-sm font-bold text-slate-800 mb-1.5">Kata Sandi Baru (Min. 5 Karakter)</label>
+        <input
+          type="password"
+          id="password_baru"
+          name="password_baru"
+          placeholder="Masukkan kata sandi baru"
+          autocomplete="new-password"
+          class="w-full min-h-[44px] bg-[#FAF7F2] border border-stone-300 px-3.5 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:bg-white transition"
+          required
+        >
+      </div>
+
+      <div>
+        <label for="konfirmasi_password" class="block text-sm font-bold text-slate-800 mb-1.5">Ulangi Kata Sandi Baru</label>
+        <input
+          type="password"
+          id="konfirmasi_password"
+          name="konfirmasi_password"
+          placeholder="Ketik ulang kata sandi baru"
+          autocomplete="new-password"
+          class="w-full min-h-[44px] bg-[#FAF7F2] border border-stone-300 px-3.5 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:bg-white transition"
+          required
+        >
+      </div>
+
+      <div class="pt-2">
+        <button
+          type="submit"
+          name="update_password"
+          class="w-full min-h-[48px] bg-orange-700 hover:bg-orange-800 active:translate-y-px text-white py-3 px-6 rounded-lg font-bold text-sm transition-all"
+        >
+          Simpan Kata Sandi Baru
+        </button>
+      </div>
+    </form>
+  </section>
 
 </div>
