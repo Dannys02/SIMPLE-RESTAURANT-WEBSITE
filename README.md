@@ -1,181 +1,157 @@
-# TakoSaya - Website Katalog & Sistem Order UMKM
+# RasaNusa - Indonesian Restaurant Catalog & Online Ordering System
 
-## 📋 Deskripsi Singkat
+A lightweight, production-ready web application designed for Indonesian culinary micro, small, and medium enterprises (MSMEs). RasaNusa provides an online menu catalog, a direct-to-WhatsApp and database-backed ordering pipeline, and an administrative control panel for business operations.
 
-**TakoSaya** adalah website UMKM/restoran sederhana yang menampilkan katalog produk menu dan memungkinkan pelanggan untuk melakukan pemesanan secara online. Website ini dilengkapi dengan admin panel untuk mengelola produk, pesanan, dan testimoni.
-
-Proyek ini dibuat sebagai tugas dalam pembelajaran RPL (Rekayasa Perangkat Lunak) dengan fokus pada fungsionalitas dasar website penjualan online.
-
----
-
-## ✨ Fitur Utama
-
-### 📱 Untuk Pelanggan (Frontend)
-- **Halaman Beranda** - Menampilkan informasi toko dan menu unggulan
-- **Katalog Produk** - Daftar lengkap menu dengan fitur pencarian
-- **Detail Produk** - Informasi lengkap produk (nama, harga, deskripsi)
-- **Sistem Pemesanan** - Pelanggan dapat memesan produk melalui form online
-- **Validasi Anti-Bot** - Menggunakan Google reCAPTCHA untuk keamanan
-- **Testimoni** - Menampilkan ulasan pelanggan
-
-### 🔐 Untuk Admin (Backend)
-- **Login Admin** - Autentikasi dengan session untuk keamanan akses
-- **Dashboard** - Ringkasan pesanan dan produk
-- **Manajemen Produk** - CRUD (Create, Read, Update, Delete) untuk menu
-- **Manajemen Testimoni** - CRUD untuk ulasan pelanggan
-- **Manajemen Pesanan** - Melihat, mengedit, dan melacak status order
-- **Notifikasi Otomatis** - Pengiriman notifikasi ke WhatsApp dan Telegram saat ada pesanan baru
-- **Cetak Laporan** - Fitur Export/Print data pesanan (belum sempurna)
+Read this document in another language:
+* [Bahasa Indonesia](README.id.md)
 
 ---
 
-## 🛠️ Teknologi yang Digunakan
+## 1. Problem Statement & Solution
 
-### Backend
-- **PHP** - Server-side scripting (MySQLi untuk database)
-- **MySQL** - Database untuk menyimpan produk, order, admin, dan testimoni
+### The Problem
+Traditional Indonesian food stalls and home-kitchen businesses often rely entirely on manual messaging via social media or chat applications. This workflow leads to:
+* High friction in sharing updated menus, prices, and stock levels.
+* Miscalculated totals and manual transaction errors.
+* Order clutter, missed incoming requests, and slow response times.
+* Exposure to automated web spam, spam submissions, and bot floods.
 
-### Frontend
-- **HTML5** - Struktur halaman
-- **Tailwind CSS** - Framework styling untuk desain responsif
-- **JavaScript (Vanilla)** - Interaksi dan logika client-side
-- **jQuery** - Manipulasi DOM dan AJAX
-- **DataTables** - Tabel interaktif untuk admin panel
-
-### Integrasi Pihak Ketiga
-- **Google reCAPTCHA v3** - Verifikasi anti-bot pada form order
-- **WhatsApp API** - Notifikasi pesanan ke admin via WhatsApp
-
----
-
-## 👤 Peran Saya dalam Proyek
-
-Saya mengembangkan sebagian **besar sistem**, termasuk frontend, struktur database, dan integrasi fitur utama, dengan bantuan AI pada beberapa bagian backend dan debugging, mencakup:
-
-- **Struktur Database** - Merancang dan membuat tabel untuk produk, pesanan, admin, testimoni
-- **Frontend Pages** - Membuat halaman HOME, katalog, detail produk, form order
-- **Admin Panel** - Membuat interface admin dengan logika CRUD untuk kelola data
-- **Sistem Login** - Implementasi autentikasi admin dengan session management
-- **API & Backend Logic** - Proses order, validasi input, rate limiting
-- **Integrasi Notifikasi** - Koneksi ke WhatsApp dan Telegram untuk notifikasi otomatis
-- **Styling & UI** - Design responsif dengan Tailwind CSS
-
-Dengan kata lain: **Saya terlibat dalam pengembangan frontend, backend dasar, serta perancangan database dan alur sistem**
+### The Solution
+RasaNusa solves these challenges through a centralized digital storefront:
+* **Real-time Catalog**: Customers view active dishes, descriptions, prices, and instant stock indicators.
+* **Transactional Ordering**: In-modal order form with inline validation, automatic subtotal calculation, server-enforced pricing, and stock decrement inside atomic transactions.
+* **Dual Notification Channel**: Immediate customer forwarding to the business WhatsApp account, paired with non-blocking Telegram notifications to administrators.
+* **Security & Bot Defense**: Google reCAPTCHA v2 verification, hidden honeypots, session-based rate limiting, input control sanitization, and parameterized prepared statements.
+* **Responsive Admin Panel**: Clean sidebar navigation for managing menu items, tracking order statuses, curating testimonials, and updating business contact details without editing code.
 
 ---
 
-## 📚 Apa yang Saya Pahami dari Proyek Ini
+## 2. Core Features
 
-### Konsep yang Saya Kuasai
-1. **Database Design** - Merancang tabel relasi dan primary key
-2. **CRUD Operations** - Implementasi Create, Read, Update, Delete data
-3. **Form Validation** - Validasi input dari client dan server
-4. **Responsive Design** - Membuat interface yang bagus di desktop dan mobile
+### Public Customer Interface
+* **Landing Page (`index.php`)**: Editorial brand presentation, operational schedule, featured menus, customer testimonials, and quick inquiry form.
+* **Full Catalog (`katalog.php`)**: Complete menu listing with real-time text search and stock badges.
+* **Menu Detail (`detail.php`)**: Dedicated item breakdown with direct order trigger.
+* **Order Modal (`orderModal`)**: Consistent across all customer pages with field-specific inline error notices (`<span>`), client-side input masking, and reCAPTCHA.
+* **Quick Contact (`#contactForm`)**: Fast inquiry form routing cleanly to WhatsApp with built-in client debounce and bot traps.
 
-### Konsep yang Masih Saya Pelajari
-- **Error Handling** yang lebih robust (sekarang dasar)
-- **Caching & Performance Optimization**
-- **API Integration** - Menghubungkan aplikasi dengan layanan pihak ketiga (reCAPTCHA, WhatsApp, Telegram)
-- **Session Management** - Cara kerja login dan otorisasi
-- **Prepared Statement vs String Concatenation** - Memahami pentingnya security untuk cegah SQL injection
-- **Rate Limiting** - Membatasi jumlah request untuk cegah spam
-- **Advanced Security** (CORS, CSRF tokens di semua form)
-- **API Design** yang lebih clean dan terstruktur
-- **Database Query Optimization** untuk dataset besar
+### Administrative Management Panel (`/admin`)
+* **Secure Authentication (`admin/login.php`)**: Password-hashed session access with brute-force delay.
+* **Overview Dashboard (`admin/index.php`)**: Real-time sales statistics, active menu counts, and operational summaries.
+* **Menu Management (`admin/menu.php`)**: Full CRUD for dishes including image upload and stock control.
+* **Order Tracking (`admin/orders.php`)**: Searchable data table with status lifecycle toggles (`pending`, `setuju`, `selesai`, `tolak`, `dibatalkan`).
+* **Testimonials (`admin/testimoni.php`)**: Customer review curation and display toggle.
+* **Store Settings (`admin/pengaturan.php`)**: Live configuration for recipient WhatsApp number, physical kitchen address, contact email, and admin credentials.
 
 ---
 
-## 📝 Catatan Pengembangan
+## 3. Technology Stack
 
-### Bantuan AI dalam Proyek
-Saya menggunakan **ChatGPT/Copilot untuk**:
-- Memperbaiki syntax dan struktur kode PHP
-- Menjelaskan konsep database design
-- Debugging ketika ada error (tapi saya yang analisis & fix)
-- Best practices dalam keamanan (reCAPTCHA, rate limiting)
-- Refactoring kode yang sudah berfungsi
-
-### Keterbatasan & Area Perbaikan
-1. **Error Messages** - Masih banyak yang generic, perlu pesan error lebih spesifik
-2. **Logging & Monitoring** - Belum ada sistem log untuk tracking masalah
-3. **Pagination** - Untuk data besar, perlu implementasi pagination
-4. **Email Notification** - Sekarang hanya WhatsApp & Telegram, perlu tambah email
-5. **Admin Features** - Belum ada role-based access (semua admin punya akses penuh)
-6. **Data Backup** - Belum ada sistem backup otomatis
-7. **Testing** - Baru testing manual, belum automation testing
+* **Backend**: PHP 7.4+ (Native with MySQLi, prepared statements, and transactional queries)
+* **Database**: MySQL 5.7+ / MariaDB 10.3+
+* **Frontend**: HTML5, Tailwind CSS, Vanilla JavaScript (ES6+), jQuery, DataTables
+* **Fonts**: Fraunces (Editorial Serif) and Plus Jakarta Sans (Geometric Sans)
+* **Security & Integrasi**: Google reCAPTCHA, WhatsApp Click-to-Chat API, Telegram Bot API
 
 ---
 
-## 🚀 Cara Menjalankan Project
+## 4. Installation & Local Setup
 
-### Prasyarat
-- PHP 7.4+ (atau versi lebih baru)
-- MySQL/MariaDB Server
-- Web Server (Apache preferred, bisa gunakan Laragon)
-- Browser modern (Chrome, Firefox, Safari)
+### Prerequisites
+* PHP 7.4 or higher
+* MySQL / MariaDB Server
+* Apache Web Server (or Laragon / XAMPP / Native PHP CLI)
+* Composer (optional, for environments using dependency packages)
 
-### Instalasi & Setup
-
-#### 1. **Siapkan Database**
-```sql
--- Buat database dengan nama sesuai di config/db.php
-CREATE DATABASE penjualan_umkm;
-
--- Import tabel yang diperlukan
--- (File SQL database ada di folder tertentu atau konsultasi dengan file yang ada)
-```
-
-#### 2. **Konfigurasi Database**
-Buka `config/db.php` dan sesuaikan dengan setting lokal Anda:
-```php
-$host = "127.0.0.1";           // Host database
-$user = "root";                // Username
-$pass = "";                    // Password
-$db = "penjualan_umkm";       // Nama database
-```
-
-#### 3. **Konfigurasi API Keys**
-Di file `config/db.php`, pastikan sudah ada:
-- **Google reCAPTCHA Keys** - Daftar di [Google reCAPTCHA Admin Console](https://www.google.com/recaptcha/admin)
-- **WhatsApp API** - Integrasi dengan platform WhatsApp (CloudAPI atau library)
-- **Telegram Bot Token** - Buat di [@BotFather](https://t.me/botfather) di Telegram
-
-#### 4. **Jalankan di Server**
+### Step 1: Clone Repository
 ```bash
-# Jika menggunakan Laragon:
-# 1. Taruh folder di C:\laragon\www\
-# 2. Buka http://localhost/WEBSITE-RESTORAN-SEDERHANA
-
-# Atau jika manual dengan PHP built-in:
-cd c:\laragon\www\WEBSITE-RESTORAN-SEDERHANA
-php -S localhost:8000
-# Buka http://localhost:8000
+git clone https://github.com/dannysmarthaf/SIMPLE-RESTAURANT-WEBSITE.git
+cd SIMPLE-RESTAURANT-WEBSITE
 ```
 
-#### 5. **Login Admin**
-- Buka http://localhost/WEBSITE-RESTORAN-SEDERHANA/admin/
-- Gunakan username & password yang sudah dibuat di database
-- Kelola produk, pesanan, dan testimoni dari sini
+### Step 2: Database Setup
+1. Start your MySQL server.
+2. Open phpMyAdmin or your MySQL CLI client.
+3. Import the provided schema:
+```sql
+SOURCE database.sql;
+```
+This initializes the `penjualan_umkm` database with pre-configured tables, admin credentials, default menus, and contact configurations.
 
-#### 6. **Akses Halaman Pelanggan**
-- Halaman Home: `/`
-- Katalog Menu: `/katalog.php`
-- Detail Produk: `/detail.php?id=[product_id]`
+### Step 3: Environment Configuration
+Configuration is located in `config/db.php`. It automatically adapts to your local host path via `base_url()`. You can customize credentials directly or define environment variables:
+
+| Variable | Default Value | Description |
+| :--- | :--- | :--- |
+| `DB_HOST` | `127.0.0.1` | Database server address |
+| `DB_USER` | `root` | Database username |
+| `DB_PASS` | `""` (empty) | Database password |
+| `DB_NAME` | `penjualan_umkm` | Target database name |
+| `RECAPTCHA_SITE_KEY` | *(Built-in Test Key)* | Google reCAPTCHA v2 Site Key |
+| `RECAPTCHA_SECRET_KEY`| *(Built-in Test Key)* | Google reCAPTCHA v2 Secret Key |
+| `TELEGRAM_BOT_TOKEN` | *(Pre-configured)* | Telegram Bot Token for order alerts |
+| `TELEGRAM_CHAT_ID` | *(Pre-configured)* | Telegram destination Chat ID |
+
+### Step 4: Run the Application
+
+#### Option A: Using Laragon / XAMPP
+1. Move the project folder into your server document directory (`C:\laragon\www\` or `C:\xampp\htdocs\`).
+2. Start Apache and MySQL services.
+3. Access the application in your browser:
+   * Public Storefront: `http://localhost/SIMPLE-RESTAURANT-WEBSITE/`
+   * Admin Control Panel: `http://localhost/SIMPLE-RESTAURANT-WEBSITE/admin/`
+
+#### Option B: Using PHP Built-in Server
+Run the following command from the project root:
+```bash
+php -S localhost:8000
+```
+Open `http://localhost:8000` in your web browser.
 
 ---
 
-## 📞 Kontak & Feedback
+## 5. Usage Guide
 
-Jika ada pertanyaan atau feedback tentang kode dan project ini, silakan buat **Issue** di GitHub atau hubungi saya langsung.
+### Customer Flow (Ordering Food)
+1. Navigate to the storefront and explore available culinary items on the home page or catalog (`/katalog.php`).
+2. Click **Pesan** on any item with available stock.
+3. Complete the modal form: enter buyer name, WhatsApp number, requested portion count, and full shipping address.
+4. Solve the Google reCAPTCHA challenge.
+5. Click **Konfirmasi & Kirim Pesanan**.
+6. The system records the transaction, decrements inventory, and redirects the buyer to WhatsApp with a structured pre-filled order draft.
+
+### Admin Flow (Managing Store & Orders)
+1. Open `/admin/` and authenticate using the default credentials:
+   * **Username**: `admin`
+   * **Password**: `password`
+2. **Reviewing Orders**: Navigate to **Kelola Pesanan** to verify incoming requests, change delivery statuses, or filter history.
+3. **Menu Maintenance**: Go to **Kelola Menu** to adjust pricing, re-stock portions, or upload new dish images.
+4. **Customizing Store Information**: Access **Pengaturan** to update your business WhatsApp number, kitchen address, or change your administrator password.
 
 ---
 
-## 📄 Lisensi
+## 6. Directory Structure
 
-Project ini dibuat untuk tujuan pendidikan sebagai tugas RPL. Silakan gunakan sebagai referensi belajar, tapi jangan copy-paste mentah tanpa memahami kodenya. 
-
-**"Belajar adalah prosesnya, bukan hasilnya!"** 🎓
+```text
+SIMPLE-RESTAURANT-WEBSITE/
+├── admin/                 # Admin panel modules (dashboard, menu, orders, settings)
+├── api/                   # Server endpoints (create_order, check_orders, send_notif)
+├── config/                # Database connection & global system helpers (db.php)
+├── src/
+│   ├── css/               # Custom stylesheets & Tailwind builds
+│   ├── img/               # Stored dish photography and assets
+│   └── js/                # Client-side scripts (index.js for forms, animations, modals)
+├── database.sql           # Complete relational database dump
+├── detail.php             # Individual dish detail view
+├── error.php              # Centralized user-friendly HTTP error page
+├── index.php              # Brand landing page & public presentation
+├── katalog.php            # Searchable product catalog
+├── README.md              # Documentation (English)
+└── README.id.md           # Documentation (Bahasa Indonesia)
+```
 
 ---
 
-**Dibuat oleh Dannys Martha Favrillia dari banyak coba-coba, debugging, dan belajar dari kesalahan**
+## 7. License
+
+Distributed for educational, personal, and small enterprise deployment purposes. Developed by **Dannys Martha Favrillia**.
