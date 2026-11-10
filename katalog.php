@@ -339,6 +339,6 @@ $nomor_tujuan = !empty($row_wa['nomor']) ? $row_wa['nomor'] : '6285645837298';
     </div>
   </footer>
 
-  <script src="src/js/index.js"></script>
+  <script src="<?= base_url('src/js/index.js') ?>"></script>
 </body>
 </html>

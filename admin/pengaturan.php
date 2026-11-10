@@ -12,10 +12,12 @@ $sql_admin = "SELECT username, password FROM admins WHERE id = '$admin_id'";
 $query_admin = mysqli_query($koneksi, $sql_admin);
 $data_admin = $query_admin ? mysqli_fetch_assoc($query_admin) : ['username' => $_SESSION['username'] ?? 'admin', 'password' => ''];
 
-$sql_wa = "SELECT nomor FROM admins_wa WHERE id = 1";
+$sql_wa = "SELECT * FROM admins_wa WHERE id = 1";
 $query_wa = mysqli_query($koneksi, $sql_wa);
 $data_wa = $query_wa ? mysqli_fetch_assoc($query_wa) : null;
 $wa_sekarang = $data_wa['nomor'] ?? '6285645837298';
+$alamat_sekarang = $data_wa['alamat'] ?? 'Jl. Nasional No. 3, Jawa Timur, Indonesia';
+$email_sekarang = $data_wa['email'] ?? 'webToko@gmail.com';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
@@ -38,17 +40,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (isset($_POST['update_wa'])) {
         $wa_input = mysqli_real_escape_string($koneksi, preg_replace('/[^0-9]/', '', $_POST['nomor_wa'] ?? ''));
+        $alamat_input = mysqli_real_escape_string($koneksi, trim($_POST['alamat_dapur'] ?? ''));
+        $email_input = mysqli_real_escape_string($koneksi, trim($_POST['email_kontak'] ?? ''));
 
-        if (strlen($wa_input) >= 10) {
-            $sql_update_wa = "UPDATE admins_wa SET nomor = '$wa_input' WHERE id = 1";
-            if (mysqli_query($koneksi, $sql_update_wa)) {
-                $pesan_sukses = "Nomor WhatsApp layanan pelanggan berhasil diperbarui.";
-                $wa_sekarang = $wa_input;
-            } else {
-                $pesan_error = "Gagal memperbarui nomor WhatsApp.";
-            }
-        } else {
+        if (strlen($wa_input) < 10) {
             $pesan_error = "Nomor WhatsApp harus terdiri dari minimal 10 digit angka.";
+        } elseif ($alamat_input === '') {
+            $pesan_error = "Alamat dapur tidak boleh kosong.";
+        } elseif ($email_input !== '' && !filter_var($email_input, FILTER_VALIDATE_EMAIL)) {
+            $pesan_error = "Format email kontak layanan tidak valid.";
+        } else {
+            $sql_update_wa = "UPDATE admins_wa SET nomor = '$wa_input', alamat = '$alamat_input', email = '$email_input' WHERE id = 1";
+            if (mysqli_query($koneksi, $sql_update_wa)) {
+                $pesan_sukses = "Informasi kontak & alamat dapur berhasil diperbarui.";
+                $wa_sekarang = $wa_input;
+                $alamat_sekarang = $alamat_input;
+                $email_sekarang = $email_input;
+            } else {
+                $pesan_error = "Gagal memperbarui informasi kontak & alamat dapur.";
+            }
         }
     }
 
@@ -133,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
       </form>
     </div>
 
-    <!-- Form Update Nomor WhatsApp -->
+    <!-- Form Update Kontak & Alamat Dapur -->
     <form method="POST" class="space-y-4">
       <div>
         <label for="nomor_wa_admin" class="block text-sm font-bold text-slate-800 mb-1.5">
@@ -148,16 +158,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
           class="w-full min-h-[44px] bg-[#FAF7F2] border border-stone-300 px-3.5 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:bg-white transition"
           required
         >
-        <p class="text-xs text-slate-600 mt-1.5">
-          Seluruh tombol pesan dan formulir kontak di halaman pelanggan akan diarahkan ke nomor ini.
+        <p class="text-xs text-slate-600 mt-1">
+          Seluruh tombol pesan dan formulir kontak di halaman pelanggan diarahkan ke nomor ini.
         </p>
       </div>
+
+      <div>
+        <label for="alamat_dapur_admin" class="block text-sm font-bold text-slate-800 mb-1.5">
+          Alamat Dapur / Lokasi Operasional
+        </label>
+        <textarea
+          id="alamat_dapur_admin"
+          name="alamat_dapur"
+          rows="2"
+          class="w-full bg-[#FAF7F2] border border-stone-300 px-3.5 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:bg-white transition"
+          required
+        ><?= htmlspecialchars($alamat_sekarang, ENT_QUOTES, 'UTF-8') ?></textarea>
+        <p class="text-xs text-slate-600 mt-1">
+          Alamat ini akan ditampilkan di bagian Kontak dan Footer beranda.
+        </p>
+      </div>
+
+      <div>
+        <label for="email_kontak_admin" class="block text-sm font-bold text-slate-800 mb-1.5">
+          Email Layanan Pelanggan
+        </label>
+        <input
+          type="email"
+          id="email_kontak_admin"
+          name="email_kontak"
+          value="<?= htmlspecialchars($email_sekarang, ENT_QUOTES, 'UTF-8') ?>"
+          placeholder="webToko@gmail.com"
+          class="w-full min-h-[44px] bg-[#FAF7F2] border border-stone-300 px-3.5 py-2.5 rounded-lg text-sm text-slate-900 placeholder:text-slate-500 focus:bg-white transition"
+        >
+      </div>
+
       <button
         type="submit"
         name="update_wa"
         class="min-h-[44px] bg-orange-700 hover:bg-orange-800 text-white px-5 py-2.5 rounded-lg font-bold text-xs transition"
       >
-        Perbarui Nomor WhatsApp
+        Simpan Informasi Kontak &amp; Alamat
       </button>
     </form>
   </section>

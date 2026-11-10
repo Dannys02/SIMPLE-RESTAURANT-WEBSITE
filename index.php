@@ -3,11 +3,13 @@ session_start();
 $_SESSION['load_time'] = time();
 include 'config/db.php';
 
-// Nomor Admin WhatsApp dari database (di-encode Base64 untuk mencegah bot scraper HTML sederhana)
-$q_wa = mysqli_query($koneksi, "SELECT nomor FROM admins_wa LIMIT 1");
+// Kontak Admin dari database (WhatsApp, Alamat, Email)
+$q_wa = mysqli_query($koneksi, "SELECT * FROM admins_wa LIMIT 1");
 $row_wa = $q_wa ? mysqli_fetch_assoc($q_wa) : null;
 $nomor_tujuan = !empty($row_wa['nomor']) ? preg_replace('/[^0-9]/', '', $row_wa['nomor']) : '6285645837298';
 $nomor_tujuan_b64 = base64_encode($nomor_tujuan);
+$alamat_dapur = !empty($row_wa['alamat']) ? $row_wa['alamat'] : 'Jl. Nasional No. 3, Jawa Timur, Indonesia';
+$email_kontak = !empty($row_wa['email']) ? $row_wa['email'] : 'webToko@gmail.com';
 
 // Hitung statistik menu nyata dari database
 $cek_jumlah = mysqli_query($koneksi, "SELECT COUNT(*) as total, SUM(IF(stok > 0, 1, 0)) as tersedia FROM produk");
@@ -423,7 +425,7 @@ $has_testi = ($query_testi && mysqli_num_rows($query_testi) > 0);
                   </div>
                   <div>
                     <dt class="font-bold text-white">Alamat Dapur</dt>
-                    <dd class="text-slate-300 mt-0.5">Jl. Nasional No. 3, Jawa Timur, Indonesia</dd>
+                    <dd class="text-slate-300 mt-0.5"><?= htmlspecialchars($alamat_dapur, ENT_QUOTES, 'UTF-8') ?></dd>
                   </div>
                 </div>
 
@@ -434,7 +436,7 @@ $has_testi = ($query_testi && mysqli_num_rows($query_testi) > 0);
                   <div>
                     <dt class="font-bold text-white">Email Layanan</dt>
                     <dd class="text-slate-300 mt-0.5">
-                      <a href="mailto:webToko@gmail.com" class="underline hover:text-orange-300">webToko@gmail.com</a>
+                      <a href="mailto:<?= htmlspecialchars($email_kontak, ENT_QUOTES, 'UTF-8') ?>" class="underline hover:text-orange-300"><?= htmlspecialchars($email_kontak, ENT_QUOTES, 'UTF-8') ?></a>
                     </dd>
                   </div>
                 </div>
@@ -540,7 +542,7 @@ $has_testi = ($query_testi && mysqli_num_rows($query_testi) > 0);
 
       <div class="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-300">
         <p>&copy; 2026 RasaNusa. Hak Cipta Dilindungi.</p>
-        <p>Jl. Nasional No. 3, Jawa Timur &bull; Senin - Sabtu (09.00 - 20.00 WIB)</p>
+        <p><?= htmlspecialchars($alamat_dapur, ENT_QUOTES, 'UTF-8') ?> &bull; Senin - Sabtu (09.00 - 20.00 WIB)</p>
       </div>
     </div>
   </footer>
@@ -644,7 +646,7 @@ $has_testi = ($query_testi && mysqli_num_rows($query_testi) > 0);
     </div>
   </div>
 
-  <script src="src/js/index.js"></script>
+  <script src="<?= base_url('src/js/index.js') ?>"></script>
   <script>
     const encodedAdminWA = "<?= htmlspecialchars($nomor_tujuan_b64, ENT_QUOTES, 'UTF-8') ?>";
     let lastContactSubmitTime = 0;

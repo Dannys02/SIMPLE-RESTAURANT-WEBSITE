@@ -13,10 +13,12 @@ CREATE TABLE IF NOT EXISTS admins (
   password VARCHAR(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
--- 2. Tabel Nomor WhatsApp Admin
+-- 2. Tabel Kontak & Profil Dapur Admin
 CREATE TABLE IF NOT EXISTS admins_wa (
   id INT(11) AUTO_INCREMENT PRIMARY KEY,
-  nomor VARCHAR(20) NOT NULL
+  nomor VARCHAR(20) NOT NULL,
+  alamat VARCHAR(255) NOT NULL DEFAULT 'Jl. Nasional No. 3, Jawa Timur, Indonesia',
+  email VARCHAR(100) NOT NULL DEFAULT 'webToko@gmail.com'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- 3. Tabel Katalog Produk (Menu)
@@ -60,7 +62,10 @@ INSERT INTO admins (id, username, password)
 VALUES (1, 'admin', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi')
 ON DUPLICATE KEY UPDATE username = VALUES(username);
 
--- Nomor WhatsApp Default Admin
-INSERT INTO admins_wa (id, nomor)
-VALUES (1, '6285645837298')
-ON DUPLICATE KEY UPDATE nomor = VALUES(nomor);
+-- Data Kontak Default Admin
+INSERT INTO admins_wa (id, nomor, alamat, email)
+VALUES (1, '6285645837298', 'Jl. Nasional No. 3, Jawa Timur, Indonesia', 'webToko@gmail.com')
+ON DUPLICATE KEY UPDATE 
+  nomor = VALUES(nomor),
+  alamat = VALUES(alamat),
+  email = VALUES(email);
