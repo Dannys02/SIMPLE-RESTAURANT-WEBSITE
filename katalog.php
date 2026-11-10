@@ -1,181 +1,334 @@
 <?php
+session_start();
+$_SESSION['load_time'] = time();
 include 'config/db.php';
 
-$search = isset($_GET['search']) ? mysqli_real_escape_string($koneksi, $_GET['search']) : '';
+$search = isset($_GET['search']) ? trim($_GET['search']) : '';
+$search_escaped = mysqli_real_escape_string($koneksi, $search);
 
-$sql = "SELECT * FROM produk WHERE nama LIKE '%$search%' OR deskripsi LIKE '%$search%' ORDER BY nama ASC";
+$sql = "SELECT * FROM produk WHERE nama LIKE '%$search_escaped%' OR deskripsi LIKE '%$search_escaped%' ORDER BY nama ASC";
 $result = mysqli_query($koneksi, $sql);
-?>
+$total_found = $result ? mysqli_num_rows($result) : 0;
 
+$q_wa = mysqli_query($koneksi, "SELECT nomor FROM admins_wa LIMIT 1");
+$row_wa = $q_wa ? mysqli_fetch_assoc($q_wa) : null;
+$nomor_tujuan = !empty($row_wa['nomor']) ? $row_wa['nomor'] : '6285645837298';
+?>
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" class="scroll-smooth">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Katalog Menu Lengkap | TokoSaya</title>
+  <meta name="description" content="Daftar katalog lengkap hidangan rumahan nusantara RasaNusa beserta harga dan ketersediaan stok harian.">
+  <title>Katalog Menu Lengkap | RasaNusa</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/css/style.css" />
   <style>
-    body {
-      font-family: 'Plus Jakarta Sans', sans-serif;
+    /*
+     * DESIGN READ & REASONS (R-31):
+     * - Palette: Warm Cream (#FAF7F2) & Stone (#F3EDE4) untuk menjaga kontinuitas visual dari beranda RasaNusa;
+     *   Deep Slate (#0F172A) untuk teks utama (>15:1) dan Terracotta Orange (#C2410C) sebagai satu aksen CTA & harga (4.85:1).
+     * - Typography: 'Fraunces' untuk judul halaman katalog dan 'Plus Jakarta Sans' untuk pencarian, filter, serta kartu menu.
+     * - Layout: Header pencarian terpusat diikuti bar status hasil pencarian dan grid katalog responsif 1-2-3 kolom.
+     */
+    :root {
+      --bg-warm: #FAF7F2;
+      --bg-stone: #F3EDE4;
+      --ink-primary: #0F172A;
+      --ink-secondary: #475569;
+      --accent-orange: #C2410C;
     }
-    .orange-gradient {
-      background: linear-gradient(135deg, #FF7E5F 0%, #FEB47B 100%);
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background-color: var(--bg-warm);
+      color: var(--ink-primary);
+    }
+    .font-serif-editorial {
+      font-family: 'Fraunces', Georgia, serif;
+    }
+    .section-index {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent-orange);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .section-index::before {
+      content: "";
+      display: inline-block;
+      width: 1.5rem;
+      height: 2px;
+      background-color: var(--accent-orange);
     }
   </style>
 </head>
-<body class="bg-slate-50 text-slate-800">
+<body class="antialiased min-h-dvh flex flex-col selection:bg-orange-700 selection:text-white">
 
-  <nav class="bg-white border-b border-gray-100 sticky top-0 z-50">
-    <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-      <a href="<?= base_url() ?>" class="text-2xl font-extrabold text-orange-600">Toko<span class="text-slate-900">Saya</span></a>
-      <a href="<?= base_url('#menu') ?>" class="text-sm font-bold text-gray-500 hover:text-orange-500 transition">← Kembali ke Beranda</a>
-    </div>
-  </nav>
+  <a href="#katalog-utama" class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:bg-orange-700 focus:text-white focus:px-4 focus:py-2 focus:rounded-lg focus:font-bold">
+    Lewati ke daftar menu
+  </a>
 
-  <header class="bg-white py-12 border-b border-gray-50">
-    <div class="container mx-auto px-4 text-center">
-      <h1 class="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">Semua Menu Kami</h1>
-      <p class="text-gray-500 mb-8 max-w-xl mx-auto">
-        Temukan berbagai pilihan menu terbaik kami dengan mudah melalui fitur pencarian di bawah ini.
-      </p>
+  <!-- Header & Navigasi -->
+  <header class="sticky top-0 z-50 bg-[#FAF7F2]/95 backdrop-blur-md border-b border-stone-200/80">
+    <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex justify-between items-center" aria-label="Navigasi Katalog">
+      <a href="<?= base_url() ?>" class="flex items-baseline gap-0.5 text-2xl font-extrabold tracking-tight text-slate-900">
+        <span class="font-serif-editorial text-orange-700">Rasa</span><span>Nusa</span>
+      </a>
 
-      <form action="" method="GET" class="max-w-2xl mx-auto relative group">
-        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400 group-focus-within:text-orange-500 transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-          </svg>
-        </div>
-        <input type="text" name="search" value="<?= htmlspecialchars($search) ?>"
-        placeholder="Cari nama menu atau deskripsi..."
-        class="w-full pl-12 pr-32 py-4 rounded-2xl border border-gray-200 focus:border-orange-500 focus:ring-4 focus:ring-orange-100 outline-none transition-all shadow-sm">
-        <button type="submit" class="absolute right-2 top-2 bottom-2 px-6 orange-gradient text-white font-bold rounded-xl shadow-md hover:scale-105 transition-transform active:scale-95">
-          Cari
-        </button>
-      </form>
-
-      <?php if ($search): ?>
-      <p class="mt-4 text-sm text-gray-400 font-medium">
-        Menampilkan hasil untuk: <span class="text-orange-600 font-bold">"<?= htmlspecialchars($search) ?>"</span>
-        <a href="katalog.php" class="ml-2 text-gray-300 hover:text-red-500 underline">Bersihkan</a>
-      </p>
-      <?php endif; ?>
-    </div>
+      <div class="flex items-center gap-3 sm:gap-6">
+        <a href="<?= base_url('#menu') ?>" class="min-h-[44px] inline-flex items-center px-3 sm:px-4 py-2 rounded-lg text-sm font-bold text-slate-700 hover:text-orange-700 hover:bg-stone-200/50 transition-colors">
+          Kembali ke Beranda
+        </a>
+        <a href="https://wa.me/<?= htmlspecialchars($nomor_tujuan, ENT_QUOTES, 'UTF-8') ?>?text=<?= urlencode('Halo Admin RasaNusa, saya ingin bertanya mengenai menu di katalog.') ?>" target="_blank" rel="noopener noreferrer" class="hidden sm:inline-flex min-h-[44px] items-center px-4 py-2 rounded-lg bg-orange-700 hover:bg-orange-800 text-white text-sm font-bold transition-colors">
+          Tanya Admin
+        </a>
+      </div>
+    </nav>
   </header>
 
-  <main class="container mx-auto px-4 py-16">
-    <?php if (mysqli_num_rows($result) > 0): ?>
-    <div class="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-      <?php while ($row = mysqli_fetch_assoc($result)): $isOut = ($row['stok'] <= 0); ?>
-      <article class="group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-300 border border-gray-100 flex flex-col">
-        <div class="relative overflow-hidden">
-          <img src="<?= (!empty($row['gambar'])) ? 'src/img/' . $row['gambar'] : 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&q=80&w=500' ?>"
-          alt="<?= htmlspecialchars($row['nama']) ?>"
-          class="w-full h-56 object-cover group-hover:scale-110 transition-transform duration-500">
-          <?php if ($isOut): ?>
-          <div class="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center">
-            <span class="bg-red-500 text-white px-4 py-1 rounded-full text-sm font-bold shadow-lg">Stok Habis</span>
-          </div>
-          <?php endif; ?>
+  <main id="katalog-utama" class="flex-grow">
+    <!-- Header Katalog & Pencarian -->
+    <section class="bg-[#F3EDE4] py-12 md:py-16 border-b border-stone-200/80">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="max-w-2xl">
+          <span class="section-index mb-3">01 / Katalog Lengkap</span>
+          <h1 class="font-serif-editorial text-slate-900 font-bold mb-3" style="font-size: clamp(2rem, 4vw, 3rem); line-height: 1.15;">
+            Daftar Hidangan RasaNusa
+          </h1>
+          <p class="text-slate-700 text-base leading-relaxed mb-8">
+            Cari hidangan berdasarkan nama atau bahan masakan. Informasi stok porsi dan harga diperbarui langsung dari dapur kami.
+          </p>
         </div>
 
-        <div class="p-4 md:p-6 flex flex-col flex-grow">
-          <h4 class="text-xl truncate font-bold group-hover:text-orange-600 transition-colors duration-300"><?= $row['nama'] ?></h4>
-
-          <div class="flex flex-col md:flex-row items-start md:items-center justify-between mb-6 pt-4 border-t border-gray-50 gap-2">
-            <span class="text-sm md:text-xl font-extrabold text-slate-900">Rp <?= number_format($row['harga'], 0, ',', '.') ?></span>
-            <span class="text-xs font-semibold px-2 py-1 bg-slate-100 rounded-md text-slate-500">Stok: <?= $row['stok'] ?></span>
+        <form action="<?= base_url('katalog.php') ?>" method="GET" class="max-w-2xl" role="search">
+          <label for="search-input" class="block text-sm font-bold text-slate-800 mb-2">
+            Cari Menu atau Deskripsi Hidangan
+          </label>
+          <div class="flex flex-col sm:flex-row gap-3">
+            <div class="relative flex-grow">
+              <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-slate-500" aria-hidden="true">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+              <input
+                type="search"
+                id="search-input"
+                name="search"
+                value="<?= htmlspecialchars($search, ENT_QUOTES, 'UTF-8') ?>"
+                placeholder="Ketik nama masakan, misalnya: ayam, sambal, paket..."
+                class="w-full min-h-[48px] pl-11 pr-4 py-3 rounded-lg bg-white border border-stone-300 text-slate-900 placeholder:text-slate-500 transition"
+              >
+            </div>
+            <div class="flex items-center gap-2">
+              <button type="submit" class="min-h-[48px] flex-1 sm:flex-initial px-6 py-3 bg-orange-700 hover:bg-orange-800 active:translate-y-px text-white font-bold text-sm rounded-lg transition">
+                Cari Menu
+              </button>
+              <?php if ($search !== ''): ?>
+              <a href="<?= base_url('katalog.php') ?>" class="min-h-[48px] inline-flex items-center justify-center px-4 py-3 bg-white hover:bg-stone-100 text-slate-800 font-bold text-sm rounded-lg border border-stone-300 transition">
+                Reset
+              </a>
+              <?php endif; ?>
+            </div>
           </div>
+        </form>
+      </div>
+    </section>
 
-          <div class="grid grid-cols-2 gap-3">
-            <button onclick='openModal(<?= json_encode($row) ?>)'
-              class="bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-xl font-bold text-sm transition shadow-md shadow-orange-100 disabled:opacity-50 disabled:cursor-not-allowed"
-              <?= $isOut ? 'disabled' : '' ?>>
-              Pesan
-            </button>
-            <a href="detail.php?id=<?= $row['id'] ?>" class="border border-orange-200 text-orange-600 hover:bg-orange-50 py-3 rounded-xl font-bold text-sm text-center shadow-sm transition">
-              Detail
+    <!-- Daftar Hasil Menu -->
+    <section class="py-12 md:py-16">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-6 mb-8 border-b border-stone-200">
+          <p class="text-sm font-semibold text-slate-700">
+            <?php if ($search !== ''): ?>
+              Menampilkan <strong><?= $total_found ?> menu</strong> untuk kata kunci <span class="text-orange-700 font-bold">"<?= htmlspecialchars($search, ENT_QUOTES, 'UTF-8') ?>"</span>
+            <?php else: ?>
+              Menampilkan total <strong><?= $total_found ?> menu</strong> yang terdaftar di katalog
+            <?php endif; ?>
+          </p>
+        </div>
+
+        <?php if ($result && $total_found > 0): ?>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+          <?php
+          $idx = 0;
+          while ($row = mysqli_fetch_assoc($result)):
+            $isOut = ((int)$row['stok'] <= 0);
+            $imgSrc = (!empty($row['gambar']))
+              ? 'src/img/' . rawurlencode($row['gambar'])
+              : 'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?auto=format&fit=crop&q=80&w=600';
+          ?>
+          <article class="bg-white rounded-xl overflow-hidden border border-stone-200/90 hover:border-orange-700/50 transition-all duration-300 flex flex-col">
+            <div class="relative overflow-hidden bg-stone-100 aspect-[4/3]">
+              <img
+                src="<?= $imgSrc ?>"
+                alt="Menu <?= htmlspecialchars($row['nama'], ENT_QUOTES, 'UTF-8') ?>"
+                width="600"
+                height="450"
+                <?= $idx === 0 ? 'fetchpriority="high"' : 'loading="lazy"' ?>
+                class="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
+              >
+              <?php if ($isOut): ?>
+              <div class="absolute inset-0 bg-slate-900/60 flex items-center justify-center p-4">
+                <span class="bg-red-700 text-white px-4 py-1.5 rounded-md text-xs font-bold uppercase tracking-wider">
+                  Stok Habis
+                </span>
+              </div>
+              <?php endif; ?>
+            </div>
+
+            <div class="p-5 md:p-6 flex flex-col flex-grow">
+              <div class="flex items-start justify-between gap-3 mb-2">
+                <h2 class="text-lg font-bold text-slate-900 leading-snug">
+                  <?= htmlspecialchars($row['nama'], ENT_QUOTES, 'UTF-8') ?>
+                </h2>
+                <span class="shrink-0 text-xs font-bold px-2.5 py-1 rounded border <?= $isOut ? 'bg-red-50 text-red-800 border-red-200' : 'bg-stone-100 text-slate-700 border-stone-200' ?>">
+                  Stok: <?= (int)$row['stok'] ?>
+                </span>
+              </div>
+
+              <?php if (!empty($row['deskripsi'])): ?>
+              <p class="text-sm text-slate-600 line-clamp-2 mb-4 leading-relaxed">
+                <?= htmlspecialchars($row['deskripsi'], ENT_QUOTES, 'UTF-8') ?>
+              </p>
+              <?php endif; ?>
+
+              <div class="mt-auto pt-4 border-t border-stone-100 flex items-center justify-between gap-4">
+                <div>
+                  <span class="block text-xs text-slate-600 font-medium">Harga per porsi</span>
+                  <span class="text-lg md:text-xl font-extrabold text-orange-700">
+                    Rp <?= number_format((int)$row['harga'], 0, ',', '.') ?>
+                  </span>
+                </div>
+
+                <div class="flex items-center gap-2">
+                  <a href="<?= base_url('detail.php?id=' . (int)$row['id']) ?>" class="min-h-[44px] inline-flex items-center justify-center px-3.5 py-2 rounded-lg border border-stone-300 text-slate-800 hover:bg-stone-100 font-bold text-sm transition-colors">
+                    Detail
+                  </a>
+                  <button
+                    type="button"
+                    onclick='openModal(<?= json_encode($row, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>)'
+                    class="min-h-[44px] inline-flex items-center justify-center px-4 py-2 rounded-lg bg-orange-700 hover:bg-orange-800 active:translate-y-px text-white font-bold text-sm transition-all disabled:opacity-50 disabled:bg-slate-400"
+                    <?= $isOut ? 'disabled aria-disabled="true"' : '' ?>
+                  >
+                    <?= $isOut ? 'Habis' : 'Pesan' ?>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </article>
+          <?php $idx++; endwhile; ?>
+        </div>
+
+        <?php else: ?>
+        <!-- Empty State saat pencarian tidak cocok atau database kosong (R-27) -->
+        <div class="bg-white rounded-2xl border border-stone-200 p-8 md:p-12 text-center max-w-xl mx-auto my-4">
+          <h2 class="text-xl font-bold text-slate-900 mb-2">
+            <?= $search !== '' ? 'Menu Tidak Ditemukan' : 'Katalog Menu Masih Kosong' ?>
+          </h2>
+          <p class="text-slate-600 text-sm leading-relaxed mb-6">
+            <?php if ($search !== ''): ?>
+              Tidak ada hidangan yang cocok dengan kata kunci <strong>"<?= htmlspecialchars($search, ENT_QUOTES, 'UTF-8') ?>"</strong>. Silakan gunakan kata kunci lain atau tampilkan seluruh daftar menu.
+            <?php else: ?>
+              Belum ada data menu yang ditambahkan ke dalam katalog. Silakan hubungi admin via WhatsApp untuk menanyakan menu harian yang tersedia.
+            <?php endif; ?>
+          </p>
+          <div class="flex flex-wrap justify-center gap-3">
+            <?php if ($search !== ''): ?>
+            <a href="<?= base_url('katalog.php') ?>" class="min-h-[44px] inline-flex items-center px-5 py-2.5 bg-orange-700 hover:bg-orange-800 text-white rounded-lg font-bold text-sm transition">
+              Tampilkan Semua Menu
+            </a>
+            <?php endif; ?>
+            <a href="<?= base_url() ?>" class="min-h-[44px] inline-flex items-center px-5 py-2.5 bg-stone-100 hover:bg-stone-200 text-slate-800 rounded-lg font-bold text-sm transition">
+              Kembali ke Beranda
             </a>
           </div>
         </div>
-      </article>
-      <?php endwhile; ?>
-    </div>
-    <?php else : ?>
-    <div class="text-center py-20">
-      <div class="text-6xl mb-4">
-        🔍
+        <?php endif; ?>
+
       </div>
-      <h3 class="text-2xl font-bold text-slate-800">Menu Tidak Ditemukan</h3>
-      <p class="text-gray-500 mt-2">
-        Maaf, menu yang Anda cari tidak tersedia dalam katalog kami.
-      </p>
-      <a href="katalog.php" class="mt-8 inline-block text-orange-500 font-bold hover:underline">Tampilkan Semua Menu</a>
-    </div>
-    <?php endif; ?>
+    </section>
   </main>
 
-  <div id="orderModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 overflow-hidden">
-    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal()"></div>
-    <div class="relative bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-y-auto transform transition-all scale-[0.9] md:scale-[1]">
-      <div class="orange-gradient p-6 text-white text-center">
-        <h3 class="text-2xl font-bold">Lengkapi Pesanan</h3>
-        <p class="text-orange-100 text-sm opacity-90" id="modalSubTitle">
-          Menu yang anda pilih
-        </p>
+  <!-- Modal Pemesanan Produk -->
+  <div id="orderModal" class="fixed inset-0 z-[60] hidden flex items-center justify-center p-4 overflow-y-auto" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal()"></div>
+
+    <div class="relative bg-white w-full max-w-lg rounded-2xl border border-stone-200 overflow-hidden my-8 z-10">
+      <div class="bg-slate-900 p-6 text-white flex items-center justify-between">
+        <div>
+          <h2 id="modalTitle" class="text-xl font-bold">Formulir Pemesanan</h2>
+          <p class="text-orange-300 text-sm font-medium mt-0.5" id="modalSubTitle">Menu pilihan Anda</p>
+        </div>
+        <button type="button" onclick="closeModal()" class="min-h-[44px] min-w-[44px] inline-flex items-center justify-center rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 text-sm font-bold" aria-label="Tutup formulir pemesanan">
+          ✕
+        </button>
       </div>
 
-      <form action="api/create_order.php" method="POST" class="p-8">
+      <form action="<?= base_url('api/create_order.php') ?>" method="POST" class="p-6 md:p-8">
         <input type="hidden" name="produk_id" id="produk_id">
-        <input type="text" name="perangkap" class="hidden w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition" tabindex="-1" autocomplete="off">
+        <input type="text" name="perangkap" class="hidden" tabindex="-1" autocomplete="off" aria-hidden="true">
 
         <div class="space-y-4">
-          <div class="grid md:grid-cols-2 gap-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label class="block text-sm font-semibold mb-1 ml-1 text-gray-700">Nama Pembeli (Min. 3 Huruf)</label>
-              <input type="text" name="nama_pembeli" maxlength="50" placeholder="Contoh: Budi" class="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition" required>
+              <label for="nama_pembeli" class="block text-sm font-bold mb-1.5 text-slate-800">Nama Pembeli (Min. 3 Huruf)</label>
+              <input type="text" id="nama_pembeli" name="nama_pembeli" maxlength="50" placeholder="Nama lengkap penerima" class="w-full bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition" required>
             </div>
             <div>
-              <label class="block text-sm font-semibold mb-1 ml-1 text-gray-700">WhatsApp (10-14 Digit)</label>
-              <input type="number" name="whatsapp" placeholder="62812..." class="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition" required>
-            </div>
-          </div>
-
-          <div class="grid md:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-sm font-semibold mb-1 ml-1 text-gray-700">Jumlah Beli</label>
-              <input type="number" name="stok" id="stok_input" value="1" min="1" max="100" oninput="hitungTotal()" class="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition">
+              <label for="whatsapp_pembeli" class="block text-sm font-bold mb-1.5 text-slate-800">Nomor WhatsApp (10-14 Digit)</label>
+              <input type="tel" id="whatsapp_pembeli" name="whatsapp" placeholder="628123456789" pattern="[0-9]{10,14}" class="w-full bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition" required>
             </div>
           </div>
 
           <div>
-            <label class="block text-sm font-semibold mb-1 ml-1 text-gray-700">Alamat Pengiriman (Min. 10 Karakter)</label>
-            <textarea name="alamat" maxlength="255" placeholder="Tuliskan alamat lengkap..." rows="3" class="w-full bg-gray-50 border border-gray-200 p-3 rounded-xl focus:ring-2 focus:ring-orange-500 outline-none transition" required></textarea>
+            <label for="stok_input" class="block text-sm font-bold mb-1.5 text-slate-800">Jumlah Porsi</label>
+            <input type="number" name="stok" id="stok_input" value="1" min="1" max="100" oninput="hitungTotal()" class="w-full sm:w-40 bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 focus:bg-white transition" required>
           </div>
+
+          <div>
+            <label for="alamat_pembeli" class="block text-sm font-bold mb-1.5 text-slate-800">Alamat Pengiriman Lengkap (Min. 10 Karakter)</label>
+            <textarea id="alamat_pembeli" name="alamat" maxlength="255" placeholder="Nama jalan, nomor rumah, RT/RW, dan patokan lokasi..." rows="3" class="w-full bg-[#FAF7F2] border border-stone-300 p-3 rounded-lg text-slate-900 placeholder:text-slate-500 focus:bg-white transition" required></textarea>
+          </div>
+
+          <div class="g-recaptcha" data-sitekey="<?= htmlspecialchars($siteKey, ENT_QUOTES, 'UTF-8') ?>"></div>
 
           <input type="hidden" name="harga" id="harga_modal">
 
-          <div class="bg-orange-50 p-4 rounded-2xl flex justify-between items-center border border-orange-100">
-            <span class="font-bold text-orange-800 text-lg">Total Pembayaran:</span>
-            <span id="total_harga" class="text-2xl font-black text-orange-600">Rp 0</span>
+          <div class="bg-[#F3EDE4] p-4 rounded-xl flex justify-between items-center border border-stone-300">
+            <span class="font-bold text-slate-900 text-sm">Estimasi Total Pembayaran:</span>
+            <span id="total_harga" class="text-xl font-extrabold text-orange-700">Rp 0</span>
           </div>
-
-          <div class="g-recaptcha" data-sitekey="6LcBT4wsAAAAAMjKbTsmCm6W-tNGyG-3Ah0FNqOS"></div>
-
         </div>
 
-        <div class="flex flex-col-reverse md:flex-row justify-end gap-3 mt-8">
-          <button type="button" onclick="closeModal()" class="w-full md:w-auto px-6 py-3 font-semibold text-gray-500 hover:text-gray-700">Batal</button>
-          <button type="submit" class="w-full md:w-auto bg-orange-500 hover:bg-orange-600 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-orange-200 transition">Konfirmasi & Kirim</button>
+        <div class="flex flex-col-reverse sm:flex-row justify-end gap-3 mt-6 pt-4 border-t border-stone-200">
+          <button type="button" onclick="closeModal()" class="min-h-[44px] px-5 py-2.5 rounded-lg border border-stone-300 font-bold text-slate-700 hover:bg-stone-100 text-sm transition">
+            Batal
+          </button>
+          <button type="submit" class="min-h-[44px] bg-orange-700 hover:bg-orange-800 active:translate-y-px text-white px-6 py-2.5 rounded-lg font-bold text-sm transition">
+            Konfirmasi & Kirim Pesanan
+          </button>
         </div>
       </form>
     </div>
   </div>
 
-  <footer class="bg-white border-t border-gray-100 py-10 mt-20">
-    <div class="container mx-auto px-4 text-center text-gray-400 text-sm font-medium">
-      &copy; 2026 TokoSaya. Hak Cipta Dilindungi.
+  <!-- Footer -->
+  <footer class="bg-slate-900 text-slate-300 border-t border-slate-800 mt-auto">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
+      <p>&copy; 2026 RasaNusa. Hak Cipta Dilindungi.</p>
+      <div class="flex gap-6 font-semibold">
+        <a href="<?= base_url() ?>" class="hover:text-orange-400 transition-colors">Beranda</a>
+        <a href="<?= base_url('#kontak') ?>" class="hover:text-orange-400 transition-colors">Hubungi Dapur</a>
+      </div>
     </div>
   </footer>
 

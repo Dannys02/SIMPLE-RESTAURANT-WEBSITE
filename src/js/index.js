@@ -113,7 +113,15 @@ function hitungTotal() {
  * Fungsi: Menutup modal saat user menekan tombol Escape
  */
 window.addEventListener("keydown", e => {
-    if (e.key === "Escape") closeModal();
+    if (e.key === "Escape") {
+        if (orderModal && !orderModal.classList.contains("hidden")) {
+            closeModal();
+        }
+        const mobileMenu = document.getElementById("mobileMenu");
+        if (mobileMenu && !mobileMenu.classList.contains("hidden")) {
+            toggleMobileMenu();
+        }
+    }
 });
 
 /**
@@ -124,11 +132,13 @@ window.addEventListener("keydown", e => {
 function toggleMobileMenu() {
     const menu = document.getElementById("mobileMenu");
     const sheet = document.getElementById("mobileSheet");
+    const btn = document.getElementById("mobileMenuBtn");
     const body = document.body;
 
     if (menu.classList.contains("hidden")) {
         // ===== TAMPILKAN MENU =====
         menu.classList.remove("hidden");
+        if (btn) btn.setAttribute("aria-expanded", "true");
 
         // Slide menu dari bawah dengan delay kecil
         setTimeout(() => {
@@ -139,6 +149,7 @@ function toggleMobileMenu() {
     } else {
         // ===== SEMBUNYIKAN MENU =====
         sheet.style.bottom = "-100%";
+        if (btn) btn.setAttribute("aria-expanded", "false");
 
         // Tunggu animasi slide selesai sebelum remove element
         setTimeout(() => {

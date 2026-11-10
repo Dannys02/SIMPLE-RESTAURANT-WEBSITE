@@ -55,22 +55,27 @@ $reqUri    = htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?= $code ?> - <?= htmlspecialchars($title, ENT_QUOTES, 'UTF-8') ?> | RumahMartha</title>
+  <title><?= $code ?> - <?= htmlspecialchars($title, ENT_QUOTES, 'UTF-8') ?> | RasaNusa</title>
   <script src="https://cdn.tailwindcss.com" defer></script>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700;9..144,800&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
   <style>
-    /* Draft without direction: ENERGY 1 / RHYTHM 1 / MOTION 1 */
-    /* Alasan warna: menggunakan palet hangat RumahMartha (#ea580c orange-600 & #0f172a slate-900) dengan kontras WCAG AA > 4.5:1 */
-    /* Alasan tipografi: Plus Jakarta Sans menjaga konsistensi identitas visual dengan halaman katalog utama */
-    /* Alasan layout: satu titik fokus di tengah layar agar pengguna langsung memahami penyebab error dan tombol pemulihan */
+    /*
+     * DESIGN READ & REASONS (R-31):
+     * - Palette: Warm Cream (#FAF7F2) sebagai latar, Putih (#FFFFFF) untuk kartu error, Deep Slate (#0F172A) untuk teks utama (>15:1),
+     *   dan Terracotta Orange (#C2410C) sebagai satu aksen CTA (5.18:1).
+     * - Typography: 'Fraunces' untuk judul error & brand 'RasaNusa', serta 'Plus Jakarta Sans' untuk penjelasan dan tombol.
+     * - Layout: Satu fokus kartu error di tengah layar dengan CSS mandiri agar tetap bekerja meskipun koneksi CDN terputus.
+     */
     :root {
-      --bg-page: #f8fafc;
+      --bg-page: #FAF7F2;
       --bg-card: #ffffff;
       --text-main: #0f172a;
       --text-muted: #475569;
       --accent: #c2410c;
       --accent-hover: #9a3412;
-      --border-color: #e2e8f0;
+      --border-color: #e7e5e4;
     }
     * {
       box-sizing: border-box;
@@ -84,6 +89,9 @@ $reqUri    = htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8
       display: flex;
       flex-direction: column;
     }
+    .font-serif-editorial {
+      font-family: 'Fraunces', Georgia, serif;
+    }
     a, button {
       cursor: pointer;
     }
@@ -92,7 +100,7 @@ $reqUri    = htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8
       outline-offset: 2px;
     }
     .fallback-header {
-      background: var(--bg-card);
+      background: var(--bg-page);
       border-bottom: 1px solid var(--border-color);
       padding: 1rem 1.5rem;
     }
@@ -106,12 +114,13 @@ $reqUri    = htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8
     .brand-link {
       font-size: 1.5rem;
       font-weight: 800;
-      color: var(--accent);
+      color: var(--text-main);
       text-decoration: none;
       letter-spacing: -0.025em;
     }
-    .brand-link span {
-      color: var(--text-main);
+    .brand-link .serif-part {
+      font-family: 'Fraunces', Georgia, serif;
+      color: var(--accent);
     }
     .main-area {
       flex: 1;
@@ -130,7 +139,7 @@ $reqUri    = htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8
     }
     .status-code {
       display: inline-block;
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       font-weight: 700;
       color: var(--accent);
       background: #ffedd5;
@@ -140,8 +149,9 @@ $reqUri    = htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8
       margin-bottom: 1rem;
     }
     h1 {
+      font-family: 'Fraunces', Georgia, serif;
       font-size: clamp(1.5rem, 4vw, 2rem);
-      font-weight: 800;
+      font-weight: 700;
       color: var(--text-main);
       margin: 0 0 0.75rem 0;
       line-height: 1.25;
@@ -153,8 +163,8 @@ $reqUri    = htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8
       margin: 0 0 1.5rem 0;
     }
     .path-box {
-      background: #f1f5f9;
-      border: 1px solid #cbd5e1;
+      background: #FAF7F2;
+      border: 1px solid #d6d3d1;
       border-radius: 0.5rem;
       padding: 0.75rem 1rem;
       font-size: 0.875rem;
@@ -177,7 +187,7 @@ $reqUri    = htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8
       color: #ffffff;
       font-weight: 700;
       font-size: 0.9375rem;
-      border-radius: 0.625rem;
+      border-radius: 0.5rem;
       text-decoration: none;
       border: 2px solid var(--accent);
       transition: background-color 0.15s ease;
@@ -199,14 +209,14 @@ $reqUri    = htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8
       color: var(--text-main);
       font-weight: 700;
       font-size: 0.9375rem;
-      border-radius: 0.625rem;
+      border-radius: 0.5rem;
       text-decoration: none;
-      border: 2px solid #94a3b8;
+      border: 1px solid #a8a29e;
       transition: background-color 0.15s ease, border-color 0.15s ease;
     }
     .btn-secondary:hover {
-      background-color: #f1f5f9;
-      border-color: #475569;
+      background-color: #f5f5f4;
+      border-color: #57534e;
     }
     .btn-secondary:active {
       transform: translateY(1px);
@@ -214,10 +224,10 @@ $reqUri    = htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8
     .fallback-footer {
       text-align: center;
       padding: 1.25rem 1rem;
-      font-size: 0.875rem;
+      font-size: 0.8125rem;
       color: var(--text-muted);
       border-top: 1px solid var(--border-color);
-      background: var(--bg-card);
+      background: var(--bg-page);
     }
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
@@ -231,7 +241,7 @@ $reqUri    = htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8
   <header class="fallback-header">
     <nav class="fallback-container" aria-label="Navigasi Utama">
       <a href="<?= htmlspecialchars(base_url(), ENT_QUOTES, 'UTF-8') ?>" class="brand-link">
-        Rumah<span>Martha</span>
+        <span class="serif-part">Rasa</span><span>Nusa</span>
       </a>
       <a href="<?= htmlspecialchars(base_url('katalog.php'), ENT_QUOTES, 'UTF-8') ?>" class="btn-secondary">
         Lihat Katalog Menu
@@ -263,7 +273,7 @@ $reqUri    = htmlspecialchars($_SERVER['REQUEST_URI'] ?? '/', ENT_QUOTES, 'UTF-8
   </main>
 
   <footer class="fallback-footer">
-    &copy; 2026 RumahMartha (TokoSaya). Hak Cipta Dilindungi.
+    &copy; 2026 RasaNusa. Hak Cipta Dilindungi.
   </footer>
 </body>
 </html>
